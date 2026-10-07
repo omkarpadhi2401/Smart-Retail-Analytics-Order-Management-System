@@ -1,0 +1,32 @@
+{% extends "shop_base.html" %}
+{% block title %}Products{% endblock %}
+{% block content %}
+<form method="get" class="filters" style="margin-bottom:16px">
+  <div class="field"><label>Category</label><select name="category" onchange="this.form.submit()"><option value="">All categories</option>{% for c in categories %}<option {{ 'selected' if sel.category == c }}>{{ c }}</option>{% endfor %}</select></div>
+  <div class="field"><label>Search</label><input name="q" value="{{ sel.q }}" placeholder="Search products"></div>
+  <button class="btn">Search</button><a class="btn ghost" href="{{ url_for('shop') }}">Reset</a>
+  <span class="muted" style="margin-left:auto">{{ rows|length }} products</span>
+</form>
+<div class="grid g4">
+  {% for p in rows %}
+  <div class="card product">
+    <div class="thumb">{{ p.name[0] }}</div>
+    <div class="card-b">
+      <div class="muted">{{ p.category }} · {{ p.sku }}</div>
+      <h3 style="font-size:15px;margin:2px 0 4px">{{ p.name }}</h3>
+      <div class="muted" style="min-height:36px">{{ p.description }}</div>
+      <div style="display:flex;align-items:center;gap:8px;margin:10px 0">
+        <b style="font-size:18px">₹{{ p.price|inr }}</b>
+        {% if p.stock <= 0 %}<span class="badge b-bad">Out of stock</span>
+        {% elif p.stock <= p.min_stock %}<span class="badge b-warn">Only {{ p.stock }} left</span>
+        {% else %}<span class="badge b-good">In stock</span>{% endif %}
+      </div>
+      {% if p.stock > 0 %}
+      <form method="post" action="{{ url_for('cart_add', pid=p.product_id) }}" style="display:flex;gap:8px">
+        <input type="number" name="quantity" value="1" min="1" max="{{ p.stock }}" style="width:64px"><button class="btn" style="flex:1;justify-content:center">Add to cart</button></form>
+      {% else %}<button class="btn ghost" disabled style="width:100%;justify-content:center;opacity:.6">Unavailable</button>{% endif %}
+    </div>
+  </div>
+  {% else %}<div class="muted">No products found.</div>{% endfor %}
+</div>
+{% endblock %}

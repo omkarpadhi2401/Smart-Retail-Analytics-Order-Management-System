@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block title %}Financial Health Score{% endblock %}
+{% block subtitle %}One score out of 100, calculated from five measured areas of the business{% endblock %}
+{% block content %}
+{% set col = {'good': '#0ca30c', 'warn': '#eda100', 'bad': '#d03b3b'} %}
+<div class="grid g21">
+  <div class="card">
+    <div class="card-h"><div><h3>Score Breakdown</h3><p>Five factors, 20 points each. The same data always gives the same score.</p></div></div>
+    <div class="card-b stack" style="gap:18px">
+      {% for x in h.factors %}
+      <div>
+        <div style="display:flex;align-items:baseline;gap:10px"><b>{{ x.name }}</b><span class="muted">{{ x.metric }}</span>
+          <span style="margin-left:auto" class="num"><b>{{ x.score }}</b> / 20</span></div>
+        <div class="meter" style="margin:6px 0"><i class="{{ x.level }}" style="width:{{ x.pct }}%"></i></div>
+        <div class="muted">{{ x.why }}</div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-h"><div><h3>Financial Health Score</h3><p>{{ period }}</p></div></div>
+    <div class="card-b" style="text-align:center">
+      <div class="score-ring" style="--p:{{ h.score }};--c:{{ col[h.level] }}"><div><div><b>{{ h.score }}</b><span>out of 100</span></div></div></div>
+      <div style="margin:10px 0"><span class="badge {{ {'good':'b-good','warn':'b-warn','bad':'b-bad'}[h.level] }}" style="font-size:13px;padding:4px 14px">{{ h.grade }}</span></div>
+      <p style="text-align:left;color:var(--ink-2)">{{ h.summary }}</p>
+      <div class="muted" style="text-align:left">80+ Excellent · 65–79 Good · 50–64 Fair · below 50 Needs Attention</div>
+    </div>
+  </div>
+</div>
+
+<div class="card mt">
+  <div class="card-h"><div><h3>Why the score has this value</h3></div></div>
+  <div class="card-b" style="padding:16px 0 0"><table>
+    <thead><tr><th>Factor</th><th>Measured value</th><th>Scoring rule</th><th class="r">Points</th><th class="r">Lost</th></tr></thead>
+    <tbody>{% for x in h.factors %}<tr><td><b>{{ x.name }}</b></td><td>{{ x.metric }}</td><td class="muted">{{ x.why }}</td><td class="r">{{ x.score }}</td><td class="r">{{ '%.1f'|format(20 - x.score) }}</td></tr>{% endfor %}</tbody>
+    <tfoot><tr><td colspan="3">Financial Health Score</td><td class="r">{{ h.score }} / 100</td><td class="r">{{ 100 - h.score }}</td></tr></tfoot>
+  </table></div>
+</div>
+
+<div class="note mt"><b>How to raise it.</b> The largest gains are in the lowest-scoring factors above.
+  See <a href="{{ url_for('insights') }}">AI Recommendations</a> for the specific actions generated from the same data.</div>
+{% endblock %}

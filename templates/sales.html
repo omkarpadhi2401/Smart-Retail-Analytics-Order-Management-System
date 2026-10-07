@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% from "_macros.html" import kpi, chart_card %}
+{% block title %}Sales Analytics{% endblock %}
+{% block subtitle %}What is selling, what is slowing down and which categories drive revenue{% endblock %}
+{% block content %}
+{% set t = f.total %}
+<div class="grid g4">
+  {{ kpi('Total Sales', t.revenue|money, t.orders|inr ~ ' orders') }}
+  {{ kpi('Units Sold', t.units|inr, 'avg order value ₹' ~ t.avg_order|inr) }}
+  {{ kpi('Sales Growth', '%+.1f'|format(f.growth_qoq) ~ '%', 'last 3 months vs previous 3') }}
+  {{ kpi('Best Seller', s.top[0].name, (s.top[0].revenue|money) ~ ' · ' ~ '%.1f'|format(s.top[0].share) ~ '% of revenue') }}
+</div>
+<div class="grid g2 mt">
+  {{ chart_card('c1', 'Monthly Sales', 'Revenue per month', 'tall') }}
+  {{ chart_card('c2', 'Top-Selling Products', 'By revenue, full period', 'tall') }}
+</div>
+<div class="grid g2 mt">
+  {{ chart_card('c3', 'Category Performance', 'Revenue by product category') }}
+  {{ chart_card('c4', 'Product Demand — Top 4 Products', 'Units sold per month') }}
+</div>
+
+<div class="grid g2 mt">
+  <div class="card">
+    <div class="card-h"><div><h3>Rising Demand</h3><p>Units sold in the last 3 months vs the 3 months before</p></div></div>
+    <div class="card-b" style="padding:16px 0 0"><table>
+      <thead><tr><th>Product</th><th class="r">Previous</th><th class="r">Recent</th><th class="r">Change</th></tr></thead>
+      <tbody>{% for x in s.rising %}<tr><td><b>{{ x.name }}</b><div class="muted">{{ x.category }}</div></td><td class="r">{{ x.previous }}</td><td class="r">{{ x.recent }}</td><td class="r"><span class="delta up">▲ {{ '%.0f'|format(x.growth) }}%</span></td></tr>
+      {% else %}<tr><td colspan="4" class="muted">No product grew 10% or more.</td></tr>{% endfor %}</tbody></table></div>
+  </div>
+  <div class="card">
+    <div class="card-h"><div><h3>Slow-Moving Products</h3><p>Fewest units sold in the last 3 months</p></div></div>
+    <div class="card-b" style="padding:16px 0 0"><table>
+      <thead><tr><th>Product</th><th class="r">Units (3 mo)</th><th class="r">In stock</th><th class="r">Change</th></tr></thead>
+      <tbody>{% for x in s.slow %}<tr><td><b>{{ x.name }}</b><div class="muted">{{ x.category }}</div></td><td class="r">{{ x.recent }}</td><td class="r">{{ x.stock }}</td>
+        <td class="r"><span class="delta {{ 'up' if x.growth >= 0 else 'down' }}">{{ '▲' if x.growth >= 0 else '▼' }} {{ '%.0f'|format(x.growth|abs) }}%</span></td></tr>{% endfor %}</tbody></table></div>
+  </div>
+</div>
+
+<div class="card mt">
+  <div class="card-h"><div><h3>Product Performance</h3><p>All products ranked by revenue</p></div></div>
+  <div class="card-b" style="padding:16px 0 0"><div class="table-wrap"><table>
+    <thead><tr><th>#</th><th>Product</th><th>Category</th><th class="r">Units sold</th><th class="r">Revenue</th><th class="r">Share</th><th class="r">Last 3 mo</th><th class="r">Demand trend</th></tr></thead>
+    <tbody>{% for x in s.products|sort(attribute='revenue', reverse=True) %}<tr>
+      <td class="muted">{{ loop.index }}</td><td><b>{{ x.name }}</b> <span class="muted">{{ x.sku }}</span></td><td>{{ x.category }}</td>
+      <td class="r">{{ x.units|inr }}</td><td class="r">₹{{ x.revenue|inr }}</td><td class="r">{{ '%.1f'|format(x.share) }}%</td><td class="r">{{ x.recent }}</td>
+      <td class="r"><span class="delta {{ 'up' if x.growth >= 0 else 'down' }}">{{ '%+.0f'|format(x.growth) }}%</span></td></tr>{% endfor %}</tbody>
+  </table></div></div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+const L = {{ f.months|map(attribute='label')|list|tojson }};
+BI.bar('c1', L, [{label: 'Revenue', data: {{ f.months|map(attribute='revenue')|list|tojson }}}], {kind: 'money'});
+BI.bar('c2', {{ s.top|map(attribute='name')|list|tojson }}, [{label: 'Revenue', data: {{ s.top|map(attribute='revenue')|list|tojson }}}], {kind: 'money', horizontal: true});
+BI.bar('c3', {{ s.categories|map(attribute='category')|list|tojson }}, [{label: 'Revenue', data: {{ s.categories|map(attribute='revenue')|list|tojson }}, color: BI.C.aqua}], {kind: 'money', horizontal: true});
+BI.line('c4', L, {{ s.top_units[:4]|tojson }}.map(p => ({label: p.name, data: p.monthly})));
+</script>
+{% endblock %}

@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% from "_macros.html" import kpi %}
+{% block title %}Low Stock Alerts{% endblock %}
+{% block subtitle %}Products where current stock is at or below the minimum stock level{% endblock %}
+{% macro restock(r) %}
+<form method="post" action="{{ url_for('restock', pid=r.product_id) }}" style="display:flex;gap:6px;justify-content:flex-end;margin-top:6px">
+  <input type="number" name="quantity" min="1" value="{{ fc[r.product_id].reorder or r.min_stock }}" style="width:80px;padding:4px 8px"><button class="btn sm">Receive stock</button></form>
+{% endmacro %}
+{% block content %}
+<div class="grid g4">
+  {{ kpi('Out of Stock', inv.out|length ~ ' <small>products</small>', 'cannot be sold right now') }}
+  {{ kpi('Low Stock', inv.low|length ~ ' <small>products</small>', 'current stock ≤ minimum stock') }}
+  {{ kpi('Units Needed', (inv.low + inv.out)|sum(attribute='shortfall') ~ ' <small>units</small>', 'to bring every product back to its minimum') }}
+  {{ kpi('Overstocked', inv.over|length ~ ' <small>products</small>', (inv.over|sum(attribute='value'))|money ~ ' of stock with 120+ days of cover') }}
+</div>
+
+<div class="grid g2 mt">
+  <div class="card">
+    <div class="card-h"><div><h3>Out of Stock</h3><p>Restock immediately — every day lost is lost revenue</p></div><span class="right badge b-bad">{{ inv.out|length }}</span></div>
+    <div class="card-b stack">
+      {% for r in inv.out %}
+      <div class="alert-card out"><div><div class="t">Out of Stock</div><div><b>{{ r.name }}</b> — 0 units remaining</div>
+        <div class="meta">{{ r.sku }} · minimum {{ r.min_stock }} · sells about {{ (r.daily * 30)|round|int }} units a month · {{ r.supplier }}</div></div>
+        <div class="right"><div class="muted">Forecast next month</div><b>{{ fc[r.product_id].next_month }} units</b>{{ restock(r) }}</div></div>
+      {% else %}<div class="muted">No products are out of stock.</div>{% endfor %}
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-h"><div><h3>Low Stock</h3><p>Most urgent first (lowest stock relative to minimum)</p></div><span class="right badge b-warn">{{ inv.low|length }}</span></div>
+    <div class="card-b stack">
+      {% for r in inv.low %}
+      <div class="alert-card"><div><div class="t">Low Stock</div><div><b>{{ r.name }}</b> — {{ r.stock }} units remaining</div>
+        <div class="meta">{{ r.sku }} · minimum {{ r.min_stock }} · about {{ r.cover|round|int if r.cover is not none else '–' }} days of cover · {{ r.supplier }}</div>
+        <div class="meter" style="margin-top:8px;max-width:260px"><i class="warn" style="width:{{ [r.stock / r.min_stock * 100, 100]|min if r.min_stock else 0 }}%"></i></div></div>
+        <div class="right"><div class="muted">Forecast next month</div><b>{{ fc[r.product_id].next_month }} units</b>{{ restock(r) }}</div></div>
+      {% else %}<div class="muted">No products are below their minimum level.</div>{% endfor %}
+    </div>
+  </div>
+</div>
+
+{% if inv.over %}
+<div class="card mt">
+  <div class="card-h"><div><h3>Overstock Watch</h3><p>More than 120 days of stock at the current rate of sale — cash is tied up here</p></div></div>
+  <div class="card-b stack">
+    {% for r in inv.over %}
+    <div class="alert-card over"><div><div class="t">{{ r.name }} — {{ r.stock }} units in stock</div>
+      <div class="meta">{{ r.sku }} · sells about {{ (r.daily * 30)|round|int }} units a month · {{ r.cover|round|int }} days of cover</div></div>
+      <div class="right"><div class="muted">Value at cost</div><b>₹{{ r.value|inr }}</b></div></div>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% from "_macros.html" import kpi, chart_card, status_badge %}
+{% block title %}Expense Anomaly Detection{% endblock %}
+{% block subtitle %}Expenses that are statistically unusual compared with the business's own spending history{% endblock %}
+{% block content %}
+<div class="grid g4">
+  {{ kpi('Expenses Checked', an.checked, 'operating expenses in the period') }}
+  {{ kpi('Unusual Expenses', an['items']|length ~ ' <small>flagged</small>', an['items']|selectattr('severity', 'equalto', 'High')|list|length ~ ' high severity') }}
+  {{ kpi('Amount Above Normal', an.excess|money, 'spend beyond the typical level') }}
+  {{ kpi('Category Spikes', an.spikes|length, 'months where a category jumped 30%+') }}
+</div>
+
+<div class="card mt">
+  <div class="card-h"><div><h3>Flagged Expenses</h3><p>Sorted by how far each one is from normal</p></div></div>
+  <div class="card-b" style="padding:16px 0 0"><div class="table-wrap"><table>
+    <thead><tr><th>Date</th><th>Expense</th><th>Category</th><th class="r">Amount</th><th class="r">Typical</th><th class="r">Times normal</th><th>Why it is unusual</th><th>Severity</th></tr></thead>
+    <tbody>{% for a in an['items'] %}<tr>
+      <td class="num">{{ a.expense_date }}</td><td><b>{{ a.description }}</b><div class="muted">{{ a.vendor }}</div></td>
+      <td><span class="badge b-mute">{{ a.category }}</span></td><td class="r"><b>₹{{ a.amount|inr }}</b></td>
+      <td class="r">₹{{ a.typical|inr }}</td><td class="r">{{ '%.1f'|format(a.ratio) }}×</td>
+      <td>{{ a.reason|replace('Rs ', '₹') }}</td><td>{{ status_badge(a.severity) }}</td></tr>
+    {% else %}<tr><td colspan="8" class="muted" style="text-align:center;padding:30px">No unusual expenses found.</td></tr>{% endfor %}</tbody>
+  </table></div></div>
+</div>
+
+<div class="grid g2 mt">
+  {{ chart_card('c1', 'Flagged Amount vs Typical Amount', 'How much each flagged expense exceeds its normal level', 'tall') }}
+  <div class="card">
+    <div class="card-h"><div><h3>Category Month-over-Month Spikes</h3><p>A category's monthly total rose 30%+ and is well above its typical month</p></div></div>
+    <div class="card-b stack">
+      {% for s in an.spikes %}
+      <div class="alert-card {{ 'out' if s.severity == 'High' }}"><div><div class="t">{{ s.category }} — {{ s.label }}</div>
+        <div class="meta">{{ s.amount|money }} vs {{ s.previous|money }} the month before ({{ '%+.0f'|format(s.change) }}%). Typical month: {{ s.typical|money }}.</div></div>
+        <div class="right">{{ status_badge(s.severity) }}</div></div>
+      {% else %}<div class="muted">No category spikes.</div>{% endfor %}
+    </div>
+  </div>
+</div>
+
+<div class="note mt"><b>How detection works.</b> Each expense is compared with similar past expenses (same description when there are at least 6 of them, otherwise the whole category).
+  A robust Z-score is calculated as (amount − median) ÷ (1.4826 × median absolute deviation). An expense is flagged when the score is 3.5 or more <i>and</i> it is at least 1.5× the typical amount; 3× or more is High severity.
+  Median-based statistics are used so that one large bill does not hide another. Stock purchases are excluded because they scale with sales.</div>
+{% endblock %}
+{% block scripts %}
+<script>
+BI.bar('c1', {{ an['items']|map(attribute='description')|list|tojson }}.map(s => s.length > 26 ? s.slice(0, 25) + '…' : s), [
+  {label: 'Typical amount', data: {{ an['items']|map(attribute='typical')|list|tojson }}, color: BI.C.grey},
+  {label: 'Flagged amount', data: {{ an['items']|map(attribute='amount')|list|tojson }}, color: BI.C.red}], {kind: 'money', horizontal: true});
+</script>
+{% endblock %}

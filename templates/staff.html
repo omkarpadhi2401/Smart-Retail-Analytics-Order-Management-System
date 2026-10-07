@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% from "_macros.html" import kpi %}
+{% block title %}Staff &amp; Payroll{% endblock %}
+{% block subtitle %}Team members and monthly salary cost{% endblock %}
+{% block content %}
+<div class="grid g3">
+  {{ kpi('Employees', rows|length, 'active staff accounts') }}
+  {{ kpi('Monthly Payroll', monthly|money, 'recorded under the Salaries expense category') }}
+  {{ kpi('Payroll Paid', (pay|sum(attribute='total'))|money, pay|length ~ ' months') }}
+</div>
+<div class="grid g2 mt">
+  <div class="card">
+    <div class="card-h"><div><h3>Team</h3></div></div>
+    <div class="card-b" style="padding:16px 0 0"><table>
+      <thead><tr><th>Name</th><th>Role</th><th>Email</th><th class="r">Monthly salary</th></tr></thead>
+      <tbody>{% for r in rows %}<tr><td><b>{{ r.name }}</b><div class="muted">{{ r.phone }}</div></td><td><span class="badge b-info">{{ r.role|title }}</span></td><td>{{ r.email }}</td><td class="r">₹{{ r.monthly_salary|inr }}</td></tr>{% endfor %}</tbody>
+    </table></div>
+  </div>
+  <div class="card">
+    <div class="card-h"><div><h3>Payroll History</h3></div></div>
+    <div class="card-b" style="padding:16px 0 0"><div class="table-wrap" style="max-height:380px"><table>
+      <thead><tr><th>Month</th><th class="r">Employees paid</th><th class="r">Total paid</th></tr></thead>
+      <tbody>{% for p in pay|reverse %}<tr><td>{{ p.month|month_label }}</td><td class="r">{{ p.n }}</td><td class="r">₹{{ p.total|inr }}</td></tr>{% endfor %}</tbody>
+    </table></div></div>
+  </div>
+</div>
+{% endblock %}

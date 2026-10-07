@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+{% from "_macros.html" import kpi, chart_card %}
+{% block title %}Cash Flow{% endblock %}
+{% block subtitle %}Money in from sales versus money out for expenses and stock purchases{% endblock %}
+{% block content %}
+{% set t = f.total %}{% set last = f.last %}
+<div class="grid g4">
+  {{ kpi('Cash Inflow', t.inflow|money, 'sales receipts, full period') }}
+  {{ kpi('Cash Outflow', t.outflow|money, 'operating ' ~ (t.opex|money) ~ ' + stock ' ~ (t.purchases|money)) }}
+  {{ kpi('Net Cash Flow', t.cash|money, positive ~ ' of ' ~ f.months|length ~ ' months cash-positive') }}
+  {{ kpi(last.label ~ ' Net Cash', last.cash|money, '<span class="badge ' ~ ('b-good' if last.cash >= 0 else 'b-bad') ~ '">' ~ ('Positive' if last.cash >= 0 else 'Negative') ~ '</span> prev ' ~ (f.prev.cash|money)) }}
+</div>
+
+<div class="grid g3 mt">
+  <div class="card kpi"><div class="label">Best month</div><div class="value">{{ best.cash|money }}</div><div class="sub">{{ best.label }} · stock purchases {{ best.purchases|money }} vs cost of goods {{ best.cogs|money }}</div></div>
+  <div class="card kpi"><div class="label">Weakest month</div><div class="value">{{ worst.cash|money }}</div><div class="sub">{{ worst.label }} · stock purchases {{ worst.purchases|money }} vs cost of goods {{ worst.cogs|money }}</div></div>
+  <div class="card kpi"><div class="label">Cash buffer</div><div class="value">{{ '%.1f'|format(runway) }} <small>months</small></div><div class="sub">cash generated this period covers this many months of operating costs ({{ burn|money }}/month)</div></div>
+</div>
+
+<div class="grid g2 mt">
+  {{ chart_card('c1', 'Cash Inflow vs Outflow', 'Monthly money received and paid', 'tall') }}
+  {{ chart_card('c2', 'Net Cash Flow', 'Blue = cash-positive month, orange = cash-negative month', 'tall') }}
+</div>
+<div class="grid g2 mt">
+  {{ chart_card('c3', 'Cumulative Cash Position', 'Running total of net cash, with a 3-month run-rate projection (dashed)') }}
+  <div class="card">
+    <div class="card-h"><div><h3>What to do</h3><p>Decision notes from the cash-flow pattern</p></div></div>
+    <div class="card-b stack">
+      {% if last.cash < 0 %}
+      <div class="alert-card out"><div><div class="t">{{ last.label }} was cash-negative ({{ last.cash|money }})</div>
+        <div class="meta">Stock purchases of {{ last.purchases|money }} were {{ (last.purchases - last.cogs)|money }} more than the stock that was sold. Profit was still {{ last.net|money }} — the cash is sitting in inventory.</div></div></div>
+      {% else %}
+      <div class="alert-card over"><div><div class="t">{{ last.label }} was cash-positive ({{ last.cash|money }})</div>
+        <div class="meta">Inflow exceeded all payments this month.</div></div></div>
+      {% endif %}
+      <div class="alert-card"><div><div class="t">Projected next 3 months: {{ proj|sum(attribute='cash')|money }}</div>
+        <div class="meta">Based on the last 3 months' average inflow and outflow, adjusted for seasonal demand. {% for p in proj %}{{ p.label }} {{ p.cash|money }}{{ ', ' if not loop.last }}{% endfor %}.</div></div></div>
+      <div class="alert-card over"><div><div class="t">Keep a buffer of {{ burn|money }}</div>
+        <div class="meta">That is one month of operating costs. Spread large supplier payments across weeks so one stock-up does not turn a month negative.</div></div></div>
+    </div>
+  </div>
+</div>
+
+<div class="card mt">
+  <div class="card-h"><div><h3>Monthly Cash Flow Statement</h3></div></div>
+  <div class="card-b" style="padding:16px 0 0"><div class="table-wrap"><table>
+    <thead><tr><th>Month</th><th class="r">Inflow (sales)</th><th class="r">Operating expenses</th><th class="r">Stock purchases</th><th class="r">Total outflow</th><th class="r">Net cash flow</th><th>Status</th><th class="r">Cumulative</th></tr></thead>
+    <tbody>{% for m in f.months %}<tr>
+      <td>{{ m.label }}</td><td class="r">₹{{ m.inflow|inr }}</td><td class="r">₹{{ m.opex|inr }}</td><td class="r">₹{{ m.purchases|inr }}</td><td class="r">₹{{ m.outflow|inr }}</td>
+      <td class="r"><b>{{ '-' if m.cash < 0 }}₹{{ m.cash|abs|inr }}</b></td>
+      <td><span class="badge {{ 'b-good' if m.cash >= 0 else 'b-bad' }}">{{ '▲ Positive' if m.cash >= 0 else '▼ Negative' }}</span></td>
+      <td class="r">₹{{ m.cum_cash|inr }}</td></tr>{% endfor %}</tbody>
+  </table></div></div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+const L = {{ f.months|map(attribute='label')|list|tojson }};
+BI.bar('c1', L, [
+  {label: 'Cash inflow', data: {{ f.months|map(attribute='inflow')|list|tojson }}, color: BI.C.blue},
+  {label: 'Cash outflow', data: {{ f.months|map(attribute='outflow')|list|tojson }}, color: BI.C.orange}], {kind: 'money'});
+BI.bar('c2', L, [{label: 'Net cash flow', data: {{ f.months|map(attribute='cash')|list|tojson }}}], {kind: 'money', signed: true});
+const cum = {{ f.months|map(attribute='cum_cash')|list|tojson }};
+const proj = {{ proj|map(attribute='cum')|list|tojson }};
+const PL = L.concat({{ proj|map(attribute='label')|list|tojson }});
+BI.line('c3', PL, [
+  {label: 'Actual', data: cum.concat(proj.map(() => null))},
+  {label: 'Projected', data: cum.map((v, i) => i === cum.length - 1 ? v : null).concat(proj), color: BI.C.orange, dash: true}], 'money');
+</script>
+{% endblock %}

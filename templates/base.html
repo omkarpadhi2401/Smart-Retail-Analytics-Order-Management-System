@@ -1,0 +1,78 @@
+{% macro ico(d) %}<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">{{ d|safe }}</svg>{% endmacro %}
+{% set I = {
+  'dash': '<rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/>',
+  'profit': '<path d="M3 17l6-6 4 4 8-8"/><path d="M15 7h6v6"/>',
+  'cash': '<rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/>',
+  'exp': '<path d="M6 2h12v20l-3-2-3 2-3-2-3 2z"/><path d="M9 8h6M9 12h6"/>',
+  'anom': '<path d="M12 3l9.5 16.5h-19z"/><path d="M12 10v4M12 17h.01"/>',
+  'inv': '<path d="M21 8l-9-5-9 5v8l9 5 9-5z"/><path d="M3 8l9 5 9-5M12 13v8"/>',
+  'bell': '<path d="M6 9a6 6 0 0112 0c0 6 2 7 2 7H4s2-1 2-7"/><path d="M10 20a2 2 0 004 0"/>',
+  'sales': '<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>',
+  'fc': '<path d="M3 16c3 0 3-8 6-8s3 5 6 5"/><path d="M15 13c2 0 3-5 6-5" stroke-dasharray="3 3"/>',
+  'heart': '<path d="M3 12h4l2-5 4 10 2-5h6"/>',
+  'ai': '<path d="M12 3l1.8 4.7L18.5 9.5l-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8z"/><path d="M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8z"/>',
+  'staff': '<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0113 0"/><path d="M16 5a3.5 3.5 0 010 6.5M18 14.5a6.5 6.5 0 013.5 5.5"/>'
+} %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Dashboard{% endblock %} · Business Finance &amp; Inventory AI</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <script src="{{ url_for('static', filename='chart.umd.js') }}"></script>
+  <script src="{{ url_for('static', filename='app.js') }}"></script>
+</head>
+<body>
+<div class="shell">
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="brand-mark">BF</div>
+      <div><div class="brand-name">Business Finance &amp; Inventory</div><div class="brand-sub">AI-Powered Analysis System</div></div>
+    </div>
+    <nav class="nav">
+      <div class="nav-group">Overview</div>
+      <a href="{{ url_for('dashboard') }}" class="{{ 'on' if active=='dashboard' }}">{{ ico(I.dash) }} Dashboard</a>
+      <div class="nav-group">Finance</div>
+      <a href="{{ url_for('profit') }}" class="{{ 'on' if active=='profit' }}">{{ ico(I.profit) }} Revenue &amp; Profit</a>
+      <a href="{{ url_for('cashflow') }}" class="{{ 'on' if active=='cashflow' }}">{{ ico(I.cash) }} Cash Flow</a>
+      <a href="{{ url_for('expenses') }}" class="{{ 'on' if active=='expenses' }}">{{ ico(I.exp) }} Expenses</a>
+      <a href="{{ url_for('anomalies') }}" class="{{ 'on' if active=='anomalies' }}">{{ ico(I.anom) }} Expense Anomalies{% if anomaly_count %}<span class="count">{{ anomaly_count }}</span>{% endif %}</a>
+      <div class="nav-group">Inventory &amp; Sales</div>
+      <a href="{{ url_for('inventory') }}" class="{{ 'on' if active=='inventory' }}">{{ ico(I.inv) }} Inventory</a>
+      <a href="{{ url_for('alerts') }}" class="{{ 'on' if active=='alerts' }}">{{ ico(I.bell) }} Low Stock Alerts{% if alert_count %}<span class="count">{{ alert_count }}</span>{% endif %}</a>
+      <a href="{{ url_for('orders') }}" class="{{ 'on' if active=='orders' }}">{{ ico(I.exp) }} Customer Orders</a>
+      <a href="{{ url_for('sales') }}" class="{{ 'on' if active=='sales' }}">{{ ico(I.sales) }} Sales Analytics</a>
+      <div class="nav-group">AI &amp; Intelligence</div>
+      <a href="{{ url_for('forecast') }}" class="{{ 'on' if active=='forecast' }}">{{ ico(I.fc) }} Demand Forecast</a>
+      <a href="{{ url_for('health') }}" class="{{ 'on' if active=='health' }}">{{ ico(I.heart) }} Financial Health</a>
+      <a href="{{ url_for('insights') }}" class="{{ 'on' if active=='insights' }}">{{ ico(I.ai) }} AI Recommendations</a>
+      <div class="nav-group">Admin</div>
+      <a href="{{ url_for('staff') }}" class="{{ 'on' if active=='staff' }}">{{ ico(I.staff) }} Staff &amp; Payroll</a>
+    </nav>
+    <div class="side-foot">Omkar Padhi · 24101C0003 · INFT-C</div>
+  </aside>
+
+  <div class="main">
+    <header class="topbar">
+      <div>
+        <h1>{{ self.title() }}</h1>
+        <div class="sub">{% block subtitle %}{% endblock %}</div>
+      </div>
+      <div class="spacer"></div>
+      <span class="chip">Reporting period: {{ period }}</span>
+      <span class="chip" title="{{ backend_note }}"><span class="dot {{ 'amber' if backend != 'MySQL' }}"></span>{{ backend }}{{ ' (demo mode)' if backend != 'MySQL' }}</span>
+      <div class="user"><div class="avatar">{{ session.name[0] }}</div><div>{{ session.name }}<br><a href="{{ url_for('logout') }}" class="muted">Sign out</a></div></div>
+    </header>
+    <main class="content">
+      {% with msgs = get_flashed_messages(with_categories=true) %}
+        {% for cat, m in msgs %}<div class="flash {{ cat }}">{{ m }}</div>{% endfor %}
+      {% endwith %}
+      {% block content %}{% endblock %}
+    </main>
+    <footer class="footer">AI-Powered Business Finance and Inventory Analysis System · Forecast engine: {{ ml_engine }} · Database: {{ backend }}</footer>
+  </div>
+</div>
+{% block scripts %}{% endblock %}
+</body>
+</html>

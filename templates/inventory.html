@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% from "_macros.html" import kpi, chart_card, status_badge %}
+{% block title %}Inventory Management{% endblock %}
+{% block subtitle %}Stock levels, value and status for every product{% endblock %}
+{% block content %}
+<div class="grid g4">
+  {{ kpi('Inventory Value (cost)', inv.value|money, 'retail value ' ~ (inv.retail_value|money)) }}
+  {{ kpi('Units in Stock', inv.units|inr, inv.rows|length ~ ' products · turnover ' ~ '%.1f'|format(inv.turnover) ~ '× a year') }}
+  {{ kpi('Low Stock', inv.low|length ~ ' <small>products</small>', 'at or below minimum level') }}
+  {{ kpi('Out of Stock', inv.out|length ~ ' <small>products</small>', inv.over|length ~ ' overstocked (120+ days of cover)') }}
+</div>
+<div class="grid g2 mt">
+  {{ chart_card('c1', 'Inventory Value by Category', 'Stock value at cost price', 'short') }}
+  {{ chart_card('c2', 'Stock Status', 'Number of products in each status', 'short') }}
+</div>
+
+<details class="card panel mt">
+  <summary class="card-h" style="padding-bottom:16px"><div><h3>+ Add Product</h3></div></summary>
+  <div class="card-b" style="border-top:1px solid var(--line)">
+    <form method="post" action="{{ url_for('add_product') }}" class="form-grid">
+      <div class="field"><label>SKU</label><input name="sku" placeholder="ELE-099" required></div>
+      <div class="field"><label>Product name</label><input name="name" required></div>
+      <div class="field"><label>Category</label><input name="category" list="cats" required><datalist id="cats">{% for c in categories %}<option>{{ c }}</option>{% endfor %}</datalist></div>
+      <div class="field"><label>Unit price (₹)</label><input type="number" name="price" min="0" step="0.01" required></div>
+      <div class="field"><label>Cost price (₹)</label><input type="number" name="cost_price" min="0" step="0.01" required></div>
+      <div class="field"><label>Current stock</label><input type="number" name="stock" min="0" value="0" required></div>
+      <div class="field"><label>Minimum stock</label><input type="number" name="min_stock" min="0" value="10" required></div>
+      <div class="field"><label>Supplier</label><input name="supplier"></div>
+      <div class="field"><label>&nbsp;</label><button class="btn">Save product</button></div>
+    </form>
+  </div>
+</details>
+
+<div class="card mt">
+  <div class="card-h" style="padding-bottom:14px;flex-wrap:wrap">
+    <form method="get" class="filters">
+      <div class="field"><label>Category</label><select name="category"><option value="">All categories</option>{% for c in categories %}<option {{ 'selected' if sel.category == c }}>{{ c }}</option>{% endfor %}</select></div>
+      <div class="field"><label>Stock status</label><select name="status"><option value="">All statuses</option>{% for s in ['In Stock', 'Low Stock', 'Out of Stock', 'Overstock'] %}<option {{ 'selected' if sel.status == s }}>{{ s }}</option>{% endfor %}</select></div>
+      <div class="field"><label>Search</label><input name="q" value="{{ sel.q }}" placeholder="Name, SKU or supplier"></div>
+      <button class="btn">Apply</button><a class="btn ghost" href="{{ url_for('inventory') }}">Reset</a>
+    </form>
+    <div class="right" style="text-align:right"><div class="muted">{{ rows|length }} products</div><div style="font-size:18px;font-weight:650">₹{{ rows|sum(attribute='value')|inr }}</div>
+      <a href="{{ url_for('export', name='inventory') }}">Export CSV</a></div>
+  </div>
+  <div class="table-wrap"><table class="tight pin">
+    <thead><tr><th>Product</th><th>Category</th><th class="r">Stock</th><th class="r">Min</th><th class="r">Unit price</th><th class="r">Cost price</th><th class="r">Stock value</th><th class="r">Sold</th><th class="r">Sales</th><th>Supplier</th><th>Status</th><th>Receive</th></tr></thead>
+    <tbody>{% for r in rows %}<tr>
+      <td><b>{{ r.name }}</b><div class="muted num">{{ r.sku }}</div></td><td>{{ r.category }}</td>
+      <td class="r"><b>{{ r.stock }}</b></td><td class="r">{{ r.min_stock }}</td>
+      <td class="r">₹{{ r.price|inr }}</td><td class="r">₹{{ r.cost_price|inr }}</td><td class="r">₹{{ r.value|inr }}</td>
+      <td class="r">{{ r.units_sold|inr }}</td><td class="r">{{ r.sales|money }}</td><td class="muted clip" title="{{ r.supplier }}">{{ r.supplier }}</td>
+      <td>{{ status_badge(r.status) }}{% if r.cover is not none and r.stock > 0 %}<div class="muted">{{ r.cover|round|int }} days cover</div>{% endif %}</td>
+      <td><form method="post" action="{{ url_for('restock', pid=r.product_id) }}" style="display:flex;gap:6px"><input type="number" name="quantity" min="1" placeholder="Qty" style="width:58px;padding:4px 6px" required><button class="btn ghost sm">Add</button></form></td>
+    </tr>{% else %}<tr><td colspan="12" class="muted" style="text-align:center;padding:30px">No products match these filters.</td></tr>{% endfor %}</tbody>
+  </table></div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+BI.bar('c1', {{ inv.by_category|map(attribute=0)|list|tojson }}, [{label: 'Stock value', data: {{ inv.by_category|map(attribute=1)|map(attribute='value')|list|tojson }}, color: BI.C.violet}], {kind: 'money'});
+const ST = ['In Stock', 'Low Stock', 'Out of Stock', 'Overstock'];
+const SC = {{ inv.counts|tojson }};
+new Chart(document.getElementById('c2'), {type: 'bar',
+  data: {labels: ST, datasets: [{label: 'Products', data: ST.map(s => SC[s] || 0), backgroundColor: ['#0ca30c', '#fab219', '#d03b3b', '#2a78d6'], borderRadius: 4, maxBarThickness: 46}]},
+  options: {plugins: {legend: {display: false}}, scales: {x: {grid: {display: false}}, y: {beginAtZero: true, ticks: {precision: 0}, grid: {color: '#eef0f4'}, border: {display: false}}}}});
+</script>
+{% endblock %}

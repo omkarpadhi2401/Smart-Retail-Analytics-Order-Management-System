@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% from "_macros.html" import kpi, chart_card %}
+{% block title %}Revenue &amp; Profit Analysis{% endblock %}
+{% block subtitle %}Where revenue goes: cost of goods, operating expenses and what is left as profit{% endblock %}
+{% block content %}
+{% set t = f.total %}
+<div class="grid g4">
+  {{ kpi('Revenue', t.revenue|money, 'last month vs previous', f.growth_mom) }}
+  {{ kpi('Gross Profit', t.gross|money, 'gross margin ' ~ '%.1f'|format(t.gross_margin) ~ '%') }}
+  {{ kpi('Net Profit', t.net|money, 'after ' ~ (t.opex|money) ~ ' operating expenses') }}
+  {{ kpi('Profit Margin', '%.1f'|format(t.margin) ~ '%', f.last.label ~ ': ' ~ '%.1f'|format(f.last.margin) ~ '% (prev ' ~ '%.1f'|format(f.prev.margin) ~ '%)') }}
+</div>
+<div class="grid g2 mt">
+  {{ chart_card('c1', 'Revenue, Cost and Profit', 'Each bar splits monthly revenue into cost of goods, operating expenses and net profit', 'tall') }}
+  {{ chart_card('c2', 'Profit Margin Trend', 'Gross and net margin as a percentage of revenue', 'tall') }}
+</div>
+<div class="grid g2 mt">
+  {{ chart_card('c3', 'Month-over-Month Revenue Growth', 'Percentage change from the previous month') }}
+  {{ chart_card('c4', 'Gross Profit by Category', 'Which product categories earn the most') }}
+</div>
+<div class="card mt">
+  <div class="card-h"><div><h3>Monthly Profit &amp; Loss</h3><p>Net profit = revenue − cost of goods sold − operating expenses</p></div>
+    <a class="right btn ghost sm" href="{{ url_for('export', name='monthly') }}">Export CSV</a></div>
+  <div class="card-b" style="padding-left:0;padding-right:0;padding-bottom:0"><div class="table-wrap"><table>
+    <thead><tr><th>Month</th><th class="r">Orders</th><th class="r">Revenue</th><th class="r">Growth</th><th class="r">Cost of goods</th><th class="r">Gross profit</th><th class="r">Operating exp.</th><th class="r">Net profit</th><th class="r">Net margin</th></tr></thead>
+    <tbody>{% for m in f.months %}<tr>
+      <td>{{ m.label }}</td><td class="r">{{ m.orders }}</td><td class="r">₹{{ m.revenue|inr }}</td>
+      <td class="r">{% if loop.first %}<span class="muted">—</span>{% else %}<span class="delta {{ 'up' if m.growth >= 0 else 'down' }}">{{ '%+.1f'|format(m.growth) }}%</span>{% endif %}</td>
+      <td class="r">₹{{ m.cogs|inr }}</td><td class="r">₹{{ m.gross|inr }}</td><td class="r">₹{{ m.opex|inr }}</td>
+      <td class="r"><b>₹{{ m.net|inr }}</b></td><td class="r">{{ '%.1f'|format(m.margin) }}%</td></tr>{% endfor %}</tbody>
+    <tfoot><tr><td>Total</td><td class="r">{{ t.orders|inr }}</td><td class="r">₹{{ t.revenue|inr }}</td><td></td><td class="r">₹{{ t.cogs|inr }}</td><td class="r">₹{{ t.gross|inr }}</td><td class="r">₹{{ t.opex|inr }}</td><td class="r">₹{{ t.net|inr }}</td><td class="r">{{ '%.1f'|format(t.margin) }}%</td></tr></tfoot>
+  </table></div></div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+const L = {{ f.months|map(attribute='label')|list|tojson }};
+BI.bar('c1', L, [
+  {label: 'Cost of goods', data: {{ f.months|map(attribute='cogs')|list|tojson }}, color: BI.C.grey},
+  {label: 'Operating expenses', data: {{ f.months|map(attribute='opex')|list|tojson }}, color: BI.C.orange},
+  {label: 'Net profit', data: {{ f.months|map(attribute='net')|list|tojson }}, color: BI.C.blue}], {kind: 'money', stacked: true});
+BI.line('c2', L, [
+  {label: 'Gross margin', data: {{ f.months|map(attribute='gross_margin')|list|tojson }}, color: BI.C.aqua},
+  {label: 'Net margin', data: {{ f.months|map(attribute='margin')|list|tojson }}, color: BI.C.blue}], 'pct');
+BI.bar('c3', L.slice(1), [{label: 'Revenue growth', data: {{ f.months[1:]|map(attribute='growth')|list|tojson }}}], {kind: 'pct', signed: true});
+BI.bar('c4', {{ s.categories|map(attribute='category')|list|tojson }}, [{label: 'Gross profit', data: {{ s.categories|map(attribute='profit')|list|tojson }}, color: BI.C.aqua}], {kind: 'money', horizontal: true});
+</script>
+{% endblock %}

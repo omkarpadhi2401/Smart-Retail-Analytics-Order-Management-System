@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% from "_macros.html" import kpi, status_badge %}
+{% block title %}Inventory Demand Forecasting{% endblock %}
+{% block subtitle %}Predicted product demand for the next 3 months and the stock needed to meet it{% endblock %}
+{% block content %}
+<div class="grid g4">
+  {{ kpi('Products Forecast', rows|length, 'forecast period: ' ~ labels[-3] ~ ' – ' ~ labels[-1]) }}
+  {{ kpi('Shortage Risk', n_short ~ ' <small>products</small>', 'stock is below next month\'s forecast demand') }}
+  {{ kpi('Overstock Risk', n_over ~ ' <small>products</small>', 'stock exceeds 3 months of forecast demand') }}
+  {{ kpi('Suggested Reorder Value', reorder_value|money, 'average back-test accuracy ' ~ '%.0f'|format(avg_acc) ~ '%') }}
+</div>
+
+{% if cur %}
+<div class="grid g21 mt">
+  <div class="card">
+    <div class="card-h" style="flex-wrap:wrap"><div><h3>Actual vs Predicted Demand — {{ cur.name }}</h3><p>Units per month. Solid = actual sales, dashed = model (fitted history + 3-month forecast)</p></div>
+      <form method="get" class="right"><select name="product" onchange="this.form.submit()">{% for x in rows|sort(attribute='name') %}<option value="{{ x.product_id }}" {{ 'selected' if x.product_id == cur.product_id }}>{{ x.name }}</option>{% endfor %}</select></form></div>
+    <div class="card-b"><div class="chart tall"><canvas id="c1"></canvas></div></div>
+  </div>
+  <div class="card">
+    <div class="card-h"><div><h3>{{ cur.name }}</h3><p>{{ cur.sku }} · {{ cur.category }}</p></div><span class="right">{{ status_badge(cur.risk) }}</span></div>
+    <div class="card-b"><table>
+      <tr><td>Current stock</td><td class="r"><b>{{ cur.stock }}</b> units</td></tr>
+      {% for m, v in cur.future %}<tr><td>Forecast {{ m|month_label }}</td><td class="r"><b>{{ v }}</b> units</td></tr>{% endfor %}
+      <tr><td>Safety stock</td><td class="r">{{ cur.safety }} units</td></tr>
+      <tr><td>Recommended stock</td><td class="r"><b>{{ cur.recommended }}</b> units</td></tr>
+      <tr><td>Suggested reorder</td><td class="r"><b>{{ cur.reorder }}</b> units</td></tr>
+      <tr><td>Potential shortage</td><td class="r">{{ cur.shortage }} units</td></tr>
+      <tr><td>Potential overstock</td><td class="r">{{ cur.overstock }} units</td></tr>
+      <tr><td>Stock lasts</td><td class="r">{% if cur.days_left is none %}–{% else %}about {{ cur.days_left|round|int }} days{% endif %}</td></tr>
+      <tr><td>Demand trend</td><td class="r">{{ '%+.1f'|format(cur.trend) }}% / month</td></tr>
+      <tr><td>Back-test accuracy</td><td class="r">{% if cur.accuracy is none %}–{% else %}{{ '%.0f'|format(cur.accuracy) }}%{% endif %}</td></tr>
+    </table></div>
+  </div>
+</div>
+{% endif %}
+
+<div class="card mt">
+  <div class="card-h"><div><h3>Forecast &amp; Stock Recommendation — All Products</h3><p>Click a product to see its chart</p></div>
+    <a class="right btn ghost sm" href="{{ url_for('export', name='forecast') }}">Export CSV</a></div>
+  <div class="card-b" style="padding:16px 0 0"><div class="table-wrap"><table class="tight">
+    <thead><tr><th>Product</th><th class="r">Avg/mo</th><th class="r">Stock</th><th class="r">Next month</th><th class="r">Next 3 mo</th><th class="r">Recommended</th><th class="r">Reorder</th><th class="r">Shortage</th><th class="r">Overstock</th><th class="r">Accuracy</th><th>Outlook</th></tr></thead>
+    <tbody>{% for x in rows %}<tr>
+      <td style="white-space:nowrap"><a href="{{ url_for('forecast', product=x.product_id) }}"><b>{{ x.name }}</b></a> <span class="muted">{{ x.sku }}</span></td>
+      <td class="r">{{ (x.history|sum / x.history|length)|round|int }}</td><td class="r"><b>{{ x.stock }}</b></td>
+      <td class="r">{{ x.next_month }}</td><td class="r">{{ x.next_3 }}</td><td class="r">{{ x.recommended }}</td>
+      <td class="r">{{ x.reorder or '–' }}</td><td class="r">{{ x.shortage or '–' }}</td><td class="r">{{ x.overstock or '–' }}</td>
+      <td class="r">{% if x.accuracy is none %}–{% else %}{{ '%.0f'|format(x.accuracy) }}%{% endif %}</td>
+      <td>{{ status_badge(x.risk) }}</td></tr>{% endfor %}</tbody>
+  </table></div></div>
+</div>
+
+<div class="note mt"><b>How the forecast works ({{ ml_engine }}).</b> Monthly unit sales of each product are divided by a store-wide seasonal index, a linear trend is fitted to the de-seasonalised series, the trend is projected 3 months ahead (capped at ±6% of average demand per month so one unusual month cannot run away), and the seasonal index is applied again.
+  <b>Recommended stock</b> = next month's forecast + safety stock (1.65 × the standard deviation of the model's past errors, about a 95% service level).
+  <b>Accuracy</b> is a back-test: the model is trained without the last 3 months and then scored on them (100% − weighted absolute percentage error).
+  The seasonal index comes from a single year of history, so treat forecasts as planning estimates and refresh them as new sales arrive.</div>
+{% endblock %}
+{% block scripts %}
+{% if cur %}
+<script>
+const hist = {{ cur.history|tojson }}, fit = {{ cur.fitted|tojson }}, fut = {{ cur.future|map(attribute=1)|list|tojson }};
+BI.line('c1', {{ labels|tojson }}, [
+  {label: 'Actual demand', data: hist.concat(fut.map(() => null))},
+  {label: 'Predicted demand', data: fit.concat(fut), color: BI.C.orange, dash: true}]);
+</script>
+{% endif %}
+{% endblock %}

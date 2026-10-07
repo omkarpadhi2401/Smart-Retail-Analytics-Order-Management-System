@@ -1,0 +1,5 @@
+flask>=3.0
+mysql-connector-python>=8.3
+numpy
+scikit-learn
+python-dotenv

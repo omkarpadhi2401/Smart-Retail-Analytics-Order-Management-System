@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Sign in · Business Finance &amp; Inventory AI</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+<div class="login">
+  <section class="hero">
+    <div class="brand-mark" style="margin-bottom:24px">BF</div>
+    <h1>AI-Powered Business Finance and Inventory Analysis System</h1>
+    <p>One place for an SME to track money, stock and sales — and to see what needs attention next.</p>
+    <ul>
+      <li>Revenue, profit, expenses and cash flow</li>
+      <li>Inventory value, low-stock alerts and sales analytics</li>
+      <li>Demand forecasting and expense anomaly detection</li>
+      <li>Financial Health Score and AI business recommendations</li>
+    </ul>
+  </section>
+  <section class="form">
+    <div class="box">
+      <h2 style="font-size:22px">Sign in</h2>
+      <p class="muted" style="margin:4px 0 20px">Use your staff account to open the dashboard.</p>
+      {% with msgs = get_flashed_messages(with_categories=true) %}
+        {% for cat, m in msgs %}<div class="flash {{ cat }}">{{ m }}</div>{% endfor %}
+      {% endwith %}
+      <form method="post" class="stack">
+        <div class="field"><label>Email</label><input type="email" name="email" value="admin@shop.com" required></div>
+        <div class="field"><label>Password</label><input type="password" name="password" value="admin123" required></div>
+        <button class="btn">Sign in</button>
+      </form>
+      <p class="muted" style="margin-top:18px">Demo login: admin@shop.com / admin123</p>
+      <p style="margin-top:14px">Are you a customer? <a href="{{ url_for('shop_login') }}"><b>Go to the customer panel →</b></a></p>
+      <p class="muted">Omkar Padhi · Roll No 24101C0003 · INFT-C</p>
+    </div>
+  </section>
+</div>
+</body>
+</html>

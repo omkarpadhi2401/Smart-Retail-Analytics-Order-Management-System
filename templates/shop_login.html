@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Customer {{ 'sign in' if mode == 'login' else 'registration' }}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+<div class="login">
+  <section class="hero">
+    <div class="brand-mark" style="margin-bottom:24px">BF</div>
+    <h1>Customer Panel</h1>
+    <p>Browse the product catalogue, add items to your cart, place orders and track their status.</p>
+    <ul><li>Live stock availability</li><li>Order history with status tracking</li><li>Every order updates the business's inventory and sales analytics</li></ul>
+  </section>
+  <section class="form">
+    <div class="box">
+      <h2 style="font-size:22px">{{ 'Customer sign in' if mode == 'login' else 'Create your account' }}</h2>
+      <p class="muted" style="margin:4px 0 20px">{{ 'Sign in to shop and see your orders.' if mode == 'login' else 'It takes less than a minute.' }}</p>
+      {% with msgs = get_flashed_messages(with_categories=true) %}
+        {% for cat, m in msgs %}<div class="flash {{ cat }}">{{ m }}</div>{% endfor %}
+      {% endwith %}
+      {% if mode == 'login' %}
+      <form method="post" class="stack">
+        <div class="field"><label>Email</label><input type="email" name="email" value="omkar.padhi@gmail.com" required></div>
+        <div class="field"><label>Password</label><input type="password" name="password" value="omkar123" required></div>
+        <button class="btn">Sign in</button>
+      </form>
+      <p style="margin-top:16px">New here? <a href="{{ url_for('shop_register') }}"><b>Create an account</b></a></p>
+      <p class="muted">Demo customer: omkar.padhi@gmail.com / omkar123</p>
+      {% else %}
+      <form method="post" class="stack">
+        <div class="field"><label>Full name</label><input name="name" required></div>
+        <div class="field"><label>Email</label><input type="email" name="email" required></div>
+        <div class="field"><label>Phone</label><input name="phone" maxlength="15"></div>
+        <div class="field"><label>City</label><input name="city"></div>
+        <div class="field"><label>Password (min 6 characters)</label><input type="password" name="password" minlength="6" required></div>
+        <button class="btn">Create account</button>
+      </form>
+      <p style="margin-top:16px">Already registered? <a href="{{ url_for('shop_login') }}"><b>Sign in</b></a></p>
+      {% endif %}
+      <p class="muted">Staff member? <a href="{{ url_for('login') }}">Open the business dashboard</a></p>
+    </div>
+  </section>
+</div>
+</body>
+</html>

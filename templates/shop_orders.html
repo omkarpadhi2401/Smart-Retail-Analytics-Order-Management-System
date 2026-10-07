@@ -1,0 +1,14 @@
+{% extends "shop_base.html" %}
+{% block title %}My Orders{% endblock %}
+{% block content %}
+{% set bc = {'Pending':'b-warn','Processing':'b-info','Shipped':'b-info','Delivered':'b-good','Cancelled':'b-bad'} %}
+<div class="stack">
+{% for o in orders %}
+  <div class="card"><div class="card-h"><div><h3>Order #{{ o.order_id }}</h3><p>{{ o.order_date[:16] }} · {{ o.address }}</p></div>
+    <div class="right" style="text-align:right"><span class="badge {{ bc.get(o.status, 'b-mute') }}">{{ o.status }}</span><div style="font-weight:650;font-size:16px;margin-top:4px">₹{{ o.total_amount|inr }}</div></div></div>
+    <div class="card-b">{% for it in items.get(o.order_id, []) %}<div style="display:flex;gap:10px;padding:4px 0"><span>{{ it.name }}</span><span class="muted">× {{ it.quantity }}</span><span style="margin-left:auto" class="num">₹{{ (it.quantity * it.unit_price)|inr }}</span></div>{% endfor %}</div></div>
+{% else %}
+  <div class="card"><div class="card-b" style="text-align:center;padding:50px"><h3>No orders yet</h3><a class="btn" href="{{ url_for('shop') }}" style="margin-top:10px">Browse products</a></div></div>
+{% endfor %}
+</div>
+{% endblock %}

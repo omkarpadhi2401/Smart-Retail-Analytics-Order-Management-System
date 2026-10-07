@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% from "_macros.html" import kpi, status_badge %}
+{% block title %}AI Business Recommendations{% endblock %}
+{% block subtitle %}Actions generated from the current sales, expense, cash-flow and inventory data{% endblock %}
+{% block content %}
+<div class="grid g4">
+  {{ kpi('High Priority', counts.High, 'act this week') }}
+  {{ kpi('Medium Priority', counts.Medium, 'plan this month') }}
+  {{ kpi('Low Priority', counts.Low, 'monitor') }}
+  {{ kpi('Financial Health', h.score ~ ' <small>/ 100</small>', h.grade) }}
+</div>
+
+<div class="tabs mt">
+  <a href="{{ url_for('insights') }}" class="{{ 'on' if not area }}">All</a>
+  {% for a in areas %}<a href="{{ url_for('insights', area=a) }}" class="{{ 'on' if area == a }}">{{ a }}</a>{% endfor %}
+</div>
+
+<div class="grid g3 mt">
+  {% for r in recs %}
+  <div class="insight {{ r.priority }}">
+    <div class="top">{{ status_badge(r.priority) }}<span class="badge b-mute">{{ r.area }}</span></div>
+    <h4>{{ r.title|replace('Rs ', '₹') }}</h4>
+    <p>{{ r.detail|replace('Rs ', '₹') }}</p>
+    <div class="act"><b>Recommended action:</b> {{ r.action|replace('Rs ', '₹') }} <a href="{{ url_for(r.link) }}">View details →</a></div>
+  </div>
+  {% else %}<div class="muted">No recommendations in this area.</div>{% endfor %}
+</div>
+
+<div class="note mt"><b>How recommendations are generated.</b> A rule engine reads the analytics on every page load: demand forecasts and stock levels (stock-out and overstock risk),
+  3-month product demand changes, category expense spikes and anomalies, operating-cost growth versus revenue growth, monthly cash flow and margin movement.
+  Each card quotes the figures that triggered it — add an expense or receive stock and the list updates.</div>
+{% endblock %}

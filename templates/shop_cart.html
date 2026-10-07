@@ -1,0 +1,23 @@
+{% extends "shop_base.html" %}
+{% block title %}Cart{% endblock %}
+{% block content %}
+{% if rows %}
+<div class="grid g21">
+  <div class="card"><div class="card-h"><div><h3>Your Cart</h3></div></div>
+    <div class="card-b" style="padding:16px 0 0"><table>
+      <thead><tr><th>Product</th><th class="r">Price</th><th class="r">Qty</th><th class="r">Total</th><th></th></tr></thead>
+      <tbody>{% for r in rows %}<tr><td><b>{{ r.name }}</b><div class="muted">{{ r.category }}</div></td><td class="r">₹{{ r.price|inr }}</td><td class="r">{{ r.qty }}</td><td class="r"><b>₹{{ r.line|inr }}</b></td>
+        <td><form method="post" action="{{ url_for('cart_remove', pid=r.product_id) }}"><button class="btn link">Remove</button></form></td></tr>{% endfor %}</tbody>
+      <tfoot><tr><td colspan="3">Order total</td><td class="r">₹{{ total|inr }}</td><td></td></tr></tfoot>
+    </table></div></div>
+  <div class="card"><div class="card-h"><div><h3>Checkout</h3><p>Payment: cash on delivery</p></div></div>
+    <div class="card-b"><form method="post" class="stack">
+      <div class="field"><label>Delivery address</label><input name="address" placeholder="Flat, street, city, PIN" required></div>
+      <button class="btn" style="justify-content:center">Place order · ₹{{ total|inr }}</button>
+      <a href="{{ url_for('shop') }}" class="muted">Continue shopping</a>
+    </form></div></div>
+</div>
+{% else %}
+<div class="card"><div class="card-b" style="text-align:center;padding:50px"><h3>Your cart is empty</h3><p class="muted">Add a few products to place an order.</p><a class="btn" href="{{ url_for('shop') }}">Browse products</a></div></div>
+{% endif %}
+{% endblock %}

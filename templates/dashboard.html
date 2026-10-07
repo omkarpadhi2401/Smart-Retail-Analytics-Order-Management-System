@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% from "_macros.html" import kpi, chart_card, status_badge %}
+{% block title %}Business Dashboard{% endblock %}
+{% block subtitle %}How the business is performing across finance, inventory and sales{% endblock %}
+{% block content %}
+{% set t = f.total %}
+<div class="grid g4">
+  {{ kpi('Total Revenue', t.revenue|money, 'last month vs previous', f.growth_mom) }}
+  {{ kpi('Total Expenses', t.expenses|money, 'operating ' ~ (t.opex|money) ~ ' + stock ' ~ (t.purchases|money)) }}
+  {{ kpi('Net Profit', t.net|money, 'net margin ' ~ '%.1f'|format(t.margin) ~ '%') }}
+  {{ kpi('Net Cash Flow', t.cash|money, f.last.label ~ ': ' ~ (f.last.cash|money)) }}
+  {{ kpi('Inventory Value', inv.value|money, inv.units|inr ~ ' units at cost · ' ~ inv.rows|length ~ ' products') }}
+  {{ kpi('Low Stock Items', (inv.low|length + inv.out|length) ~ ' <small>products</small>', inv.low|length ~ ' low · ' ~ inv.out|length ~ ' out of stock · <a href="' ~ url_for('alerts') ~ '">view alerts</a>') }}
+  {{ kpi('Sales Growth', '%+.1f'|format(f.growth_qoq) ~ '%', 'last 3 months vs previous 3') }}
+  {{ kpi('Financial Health Score', health.score ~ ' <small>/ 100</small>', health.grade ~ ' · <a href="' ~ url_for('health') ~ '">see why</a>') }}
+</div>
+
+{% if live.orders %}<div class="note mt"><b>{{ live.months|join(', ') }} in progress:</b> {{ live.orders }} new orders worth {{ live.revenue|money }} so far ({{ live.units }} units). A month that has only just started is kept out of the trend charts, growth and health score until it has enough data; stock levels already reflect these orders. <a href="{{ url_for('orders') }}">View orders</a></div>{% endif %}
+<div class="grid g21 mt">
+  {{ chart_card('c_rev_exp', 'Revenue vs Expenses', 'Monthly revenue against all money paid out (operating costs + stock purchases)', 'tall') }}
+  <div class="card">
+    <div class="card-h"><div><h3>AI Insights</h3><p>Top priorities generated from current data</p></div>
+      <a class="right btn ghost sm" href="{{ url_for('insights') }}">View all</a></div>
+    <div class="card-b stack">
+      {% for r in recs %}
+      <div><div>{{ status_badge(r.priority) }} <span class="muted">{{ r.area }}</span></div>
+        <div style="font-weight:600;margin-top:3px">{{ r.title }}</div>
+        <div class="muted">{{ r.action }}</div></div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+
+<div class="grid g3 mt">
+  {{ chart_card('c_profit', 'Monthly Profit', 'Net profit after cost of goods and operating expenses') }}
+  {{ chart_card('c_cash', 'Cash Flow', 'Net cash per month — orange marks a negative month') }}
+  {{ chart_card('c_sales', 'Sales Trend', 'Units sold per month') }}
+</div>
+
+<div class="grid g3 mt">
+  {{ chart_card('c_top', 'Top Selling Products', 'By revenue, full period') }}
+  {{ chart_card('c_inv', 'Inventory Distribution', 'Stock value at cost by category') }}
+  {{ chart_card('c_exp', 'Expense Categories', 'Share of total spend') }}
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+const L = {{ f.months|map(attribute='label')|list|tojson }};
+BI.line('c_rev_exp', L, [
+  {label: 'Revenue', data: {{ f.months|map(attribute='revenue')|list|tojson }}},
+  {label: 'Expenses', data: {{ f.months|map(attribute='expenses')|list|tojson }}}], 'money');
+BI.bar('c_profit', L, [{label: 'Net profit', data: {{ f.months|map(attribute='net')|list|tojson }}}], {kind: 'money', signed: true});
+BI.bar('c_cash', L, [{label: 'Net cash flow', data: {{ f.months|map(attribute='cash')|list|tojson }}, color: BI.C.aqua}], {kind: 'money', signed: true});
+BI.line('c_sales', L, [{label: 'Units sold', data: {{ f.months|map(attribute='units')|list|tojson }}}]);
+BI.bar('c_top', {{ s.top[:6]|map(attribute='name')|list|tojson }}, [{label: 'Revenue', data: {{ s.top[:6]|map(attribute='revenue')|list|tojson }}}], {kind: 'money', horizontal: true});
+BI.bar('c_inv', {{ inv.by_category|map(attribute=0)|list|tojson }}, [{label: 'Stock value', data: {{ inv.by_category|map(attribute=1)|map(attribute='value')|list|tojson }}, color: BI.C.violet}], {kind: 'money', horizontal: true});
+BI.donut('c_exp', {{ f.by_category|map(attribute=0)|list|tojson }}, {{ f.by_category|map(attribute=1)|list|tojson }}, 'money', {{ f.by_category|map(attribute=0)|list|tojson }}.map(BI.expColor));
+</script>
+{% endblock %}

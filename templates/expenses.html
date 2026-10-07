@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+{% from "_macros.html" import kpi, chart_card, status_badge %}
+{% block title %}Expense Management{% endblock %}
+{% block subtitle %}Record, filter and analyse business spending{% endblock %}
+{% block content %}
+{% set t = f.total %}
+<div class="grid g4">
+  {{ kpi('Total Expenses', t.expenses|money, 'all categories, full period') }}
+  {{ kpi('Operating Expenses', t.opex|money, '%.1f'|format(t.opex / t.revenue * 100) ~ '% of revenue') }}
+  {{ kpi(f.last.label ~ ' Operating Exp.', f.last.opex|money, 'vs previous month', (f.last.opex - f.prev.opex) / f.prev.opex * 100, True) }}
+  {{ kpi('Unusual Expenses', an['items']|length ~ ' <small>flagged</small>', (an.excess|money) ~ ' above normal · <a href="' ~ url_for('anomalies') ~ '">review</a>') }}
+</div>
+
+<div class="grid g21 mt">
+  {{ chart_card('c1', 'Monthly Spending by Category', 'Operating expenses only (stock purchases excluded so smaller categories stay readable)', 'tall') }}
+  {{ chart_card('c2', 'Spending by Category', 'Share of total spend, full period', 'tall') }}
+</div>
+
+{% if an['items'] %}
+<div class="card mt">
+  <div class="card-h"><div><h3>AI Insight — Unusually High Expenses</h3><p>Flagged automatically by comparing each expense with similar past expenses</p></div>
+    <a class="right btn ghost sm" href="{{ url_for('anomalies') }}">Open anomaly report</a></div>
+  <div class="card-b stack">
+    {% for a in an['items'][:3] %}
+    <div class="alert-card {{ 'out' if a.severity == 'High' }}"><div><div class="t">{{ a.description }} — ₹{{ a.amount|inr }}</div>
+      <div class="meta">{{ a.expense_date }} · {{ a.category }} · {{ a.reason|replace('Rs ', '₹') }}</div></div>
+      <div class="right">{{ status_badge(a.severity) }}</div></div>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+
+<details class="card panel mt">
+  <summary class="card-h" style="padding-bottom:16px"><div><h3>+ Add Expense</h3><p>New entries are included in every chart, the health score and anomaly detection immediately</p></div></summary>
+  <div class="card-b" style="border-top:1px solid var(--line)">
+    <form method="post" class="form-grid">
+      <div class="field"><label>Date</label><input type="date" name="expense_date" value="{{ default_date }}" required></div>
+      <div class="field"><label>Category</label><select name="category">{% for c in categories %}<option>{{ c }}</option>{% endfor %}</select></div>
+      <div class="field"><label>Description</label><input name="description" placeholder="e.g. Electricity bill" required></div>
+      <div class="field"><label>Vendor</label><input name="vendor" placeholder="Paid to"></div>
+      <div class="field"><label>Amount (₹)</label><input type="number" name="amount" min="1" step="0.01" required></div>
+      <div class="field"><label>Payment method</label><select name="payment_method"><option>Bank Transfer</option><option>UPI</option><option>Cash</option><option>Credit Card</option><option>Auto Debit</option></select></div>
+      <div class="field"><label>&nbsp;</label><button class="btn">Save expense</button></div>
+    </form>
+  </div>
+</details>
+
+<div class="card mt">
+  <div class="card-h" style="padding-bottom:14px;flex-wrap:wrap">
+    <form method="get" class="filters">
+      <div class="field"><label>Category</label><select name="category"><option value="">All categories</option>{% for c in categories %}<option {{ 'selected' if sel.category == c }}>{{ c }}</option>{% endfor %}</select></div>
+      <div class="field"><label>Month</label><select name="month"><option value="">All months</option>{% for m in months %}<option value="{{ m }}" {{ 'selected' if sel.month == m }}>{{ m|month_label }}</option>{% endfor %}</select></div>
+      <div class="field"><label>Search</label><input name="q" value="{{ sel.q }}" placeholder="Description or vendor"></div>
+      <div class="field"><label>Show</label><select name="flagged"><option value="">All expenses</option><option value="1" {{ 'selected' if sel.flagged }}>Unusual only</option></select></div>
+      <button class="btn">Apply</button><a class="btn ghost" href="{{ url_for('expenses') }}">Reset</a>
+    </form>
+    <div class="right" style="text-align:right"><div class="muted">{{ rows|length }} expenses</div><div style="font-size:18px;font-weight:650">₹{{ total|inr }}</div>
+      <a href="{{ url_for('export', name='expenses') }}">Export CSV</a></div>
+  </div>
+  {% if by_cat|length > 1 %}<div style="padding:0 18px 14px" class="tabs">{% for c, v in by_cat %}<span class="chip">{{ c }} · {{ v|money }}</span>{% endfor %}</div>{% endif %}
+  <div class="table-wrap"><table>
+    <thead><tr><th>Date</th><th>Category</th><th>Description</th><th>Vendor</th><th>Payment</th><th class="r">Amount</th><th>Status</th><th></th></tr></thead>
+    <tbody>{% for e in rows %}<tr class="{{ 'flag' if e.expense_id in ids }}">
+      <td class="num">{{ e.expense_date }}</td><td><span class="badge b-mute">{{ e.category }}</span></td><td>{{ e.description }}</td>
+      <td>{{ e.vendor }}</td><td class="muted">{{ e.payment_method }}</td><td class="r"><b>₹{{ e.amount|inr }}</b></td>
+      <td>{% if e.expense_id in ids %}<span class="badge b-bad">⚠ Unusual</span>{% else %}<span class="badge b-good">Normal</span>{% endif %}</td>
+      <td><form method="post" action="{{ url_for('delete_expense', eid=e.expense_id) }}" onsubmit="return confirm('Delete this expense?')"><button class="btn link">Delete</button></form></td>
+    </tr>{% else %}<tr><td colspan="8" class="muted" style="text-align:center;padding:30px">No expenses match these filters.</td></tr>{% endfor %}</tbody>
+  </table></div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+const L = {{ f.months|map(attribute='label')|list|tojson }};
+const CM = {{ f.cat_month|tojson }};
+const cats = {{ f.by_category|map(attribute=0)|list|tojson }}.filter(c => c !== 'Inventory Purchase');
+const order = {{ categories|tojson }};
+const palette = [BI.C.blue, BI.C.orange, BI.C.aqua, BI.C.yellow, BI.C.magenta, BI.C.green, BI.C.violet, BI.C.red];
+BI.bar('c1', L, cats.map(c => ({label: c, data: CM[c], color: BI.expColor(c)})), {kind: 'money', stacked: true});
+BI.donut('c2', {{ f.by_category|map(attribute=0)|list|tojson }}, {{ f.by_category|map(attribute=1)|list|tojson }}, 'money', {{ f.by_category|map(attribute=0)|list|tojson }}.map(BI.expColor));
+</script>
+{% endblock %}

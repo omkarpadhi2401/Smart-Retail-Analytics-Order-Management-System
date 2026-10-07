@@ -1,0 +1,27 @@
+{% macro kpi(label, value, sub='', delta=None, invert=False) %}
+<div class="card kpi">
+  <div class="label">{{ label }}</div>
+  <div class="value">{{ value|safe }}</div>
+  <div class="sub">
+    {% if delta is not none %}
+      {% set good = (delta >= 0) != invert %}
+      <span class="delta {{ 'up' if good else 'down' }}">{{ '▲' if delta >= 0 else '▼' }} {{ '%.1f'|format(delta|abs) }}%</span>
+    {% endif %}
+    {{ sub|safe }}
+  </div>
+</div>
+{% endmacro %}
+
+{% macro status_badge(s) %}
+{% set cls = {'In Stock':'b-good','Low Stock':'b-warn','Out of Stock':'b-bad','Overstock':'b-info',
+              'Balanced':'b-good','Shortage risk':'b-warn','Stock-out':'b-bad',
+              'High':'b-bad','Medium':'b-warn','Low':'b-good'} %}
+<span class="badge {{ cls.get(s, 'b-mute') }}">{{ s }}</span>
+{% endmacro %}
+
+{% macro chart_card(id, title, sub='', size='') %}
+<div class="card">
+  <div class="card-h"><div><h3>{{ title }}</h3>{% if sub %}<p>{{ sub }}</p>{% endif %}</div></div>
+  <div class="card-b"><div class="chart {{ size }}"><canvas id="{{ id }}"></canvas></div></div>
+</div>
+{% endmacro %}

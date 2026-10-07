@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% from "_macros.html" import kpi %}
+{% block title %}Customer Orders{% endblock %}
+{% block subtitle %}Orders placed through the customer panel and earlier sales — update their status here{% endblock %}
+{% block content %}
+{% set bc = {'Pending':'b-warn','Processing':'b-info','Shipped':'b-info','Delivered':'b-good','Cancelled':'b-bad'} %}
+<div class="grid g4">
+  {{ kpi('Pending', counts.get('Pending', 0), 'waiting to be processed') }}
+  {{ kpi('Processing', counts.get('Processing', 0), 'being packed') }}
+  {{ kpi('Shipped', counts.get('Shipped', 0), 'on the way') }}
+  {{ kpi('Delivered', counts.get('Delivered', 0)|inr, counts.get('Cancelled', 0) ~ ' cancelled') }}
+</div>
+<div class="tabs mt">
+  <a href="{{ url_for('orders') }}" class="{{ 'on' if not status }}">Latest</a>
+  {% for s in statuses %}<a href="{{ url_for('orders', status=s) }}" class="{{ 'on' if status == s }}">{{ s }}</a>{% endfor %}
+</div>
+<div class="card mt"><div class="table-wrap"><table>
+  <thead><tr><th>Order</th><th>Date</th><th>Customer</th><th>Deliver to</th><th class="r">Total</th><th>Status</th><th>Update status</th></tr></thead>
+  <tbody>{% for o in rows %}<tr>
+    <td><b>#{{ o.order_id }}</b></td><td class="num">{{ o.order_date[:16] }}</td>
+    <td>{{ o.customer }} <span class="muted">{{ o.customer_type }}</span></td><td class="muted">{{ o.address }}</td>
+    <td class="r"><b>₹{{ o.total_amount|inr }}</b></td><td><span class="badge {{ bc.get(o.status, 'b-mute') }}">{{ o.status }}</span></td>
+    <td>{% if o.status == 'Cancelled' %}<span class="muted">—</span>{% else %}<form method="post" action="{{ url_for('update_order', oid=o.order_id) }}" style="display:flex;gap:6px">
+      <select name="status" style="padding:4px 8px">{% for s in statuses %}<option {{ 'selected' if s == o.status }}>{{ s }}</option>{% endfor %}</select><button class="btn ghost sm">Save</button></form>{% endif %}</td>
+  </tr>{% else %}<tr><td colspan="7" class="muted" style="text-align:center;padding:30px">No orders with this status.</td></tr>{% endfor %}</tbody>
+</table></div></div>
+<p class="muted mt">Showing the latest {{ rows|length }} orders. Cancelling an order returns its items to stock.</p>
+{% endblock %}
