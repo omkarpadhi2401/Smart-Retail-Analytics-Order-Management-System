@@ -6,34 +6,31 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
-<div class="login">
-  <section class="hero">
-    <div class="brand-mark" style="margin-bottom:24px">BF</div>
-    <h1>AI-Powered Business Finance and Inventory Analysis System</h1>
-    <p>One place for an SME to track money, stock and sales — and to see what needs attention next.</p>
-    <ul>
-      <li>Revenue, profit, expenses and cash flow</li>
-      <li>Inventory value, low-stock alerts and sales analytics</li>
-      <li>Demand forecasting and expense anomaly detection</li>
-      <li>Financial Health Score and AI business recommendations</li>
-    </ul>
-  </section>
-  <section class="form">
-    <div class="box">
-      <h2 style="font-size:22px">Sign in</h2>
-      <p class="muted" style="margin:4px 0 20px">Use your staff account to open the dashboard.</p>
+<div class="auth-wrap">
+  <div class="auth-card">
+    <div class="auth-header">
+      <div class="brand-mark" style="margin:0 auto 16px">BF</div>
+      <h2>Business Finance &amp; Inventory</h2>
+      <p class="muted" style="margin-top:4px">AI-Powered Financial &amp; Stock Analysis System</p>
+    </div>
+    <div class="auth-body">
+      <h3 style="font-size:18px;margin-bottom:6px">Staff Sign In</h3>
+      <p class="muted" style="margin:0 0 18px">Sign in with your staff account to access the dashboard.</p>
       {% with msgs = get_flashed_messages(with_categories=true) %}
         {% for cat, m in msgs %}<div class="flash {{ cat }}">{{ m }}</div>{% endfor %}
       {% endwith %}
       <form method="post" class="stack">
-        <div class="field"><label>Email</label><input type="email" name="email" value="admin@shop.com" required></div>
+        <div class="field"><label>Email address</label><input type="email" name="email" value="admin@shop.com" required autofocus></div>
         <div class="field"><label>Password</label><input type="password" name="password" value="admin123" required></div>
-        <button class="btn">Sign in</button>
+        <button class="btn" style="width:100%;justify-content:center;padding:10px;margin-top:6px">Sign in to Dashboard</button>
       </form>
-      <p class="muted" style="margin-top:18px">Staff login: admin@shop.com / admin123</p>
-      <p style="margin-top:14px">Are you a customer? <a href="{{ url_for('shop_login') }}"><b>Go to the customer panel →</b></a></p>
+      <div class="auth-meta">
+        <p class="muted">Staff credentials: <code>admin@shop.com</code> / <code>admin123</code></p>
+        <div class="auth-divider"></div>
+        <p>Customer shopping account? <a href="{{ url_for('shop_login') }}"><b>Go to Customer Panel →</b></a></p>
+      </div>
     </div>
-  </section>
+  </div>
 </div>
 </body>
 </html>

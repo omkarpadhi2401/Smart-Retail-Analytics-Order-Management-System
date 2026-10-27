@@ -43,20 +43,66 @@
       <a href="{{ url_for('export', name='inventory') }}">Export CSV</a></div>
   </div>
   <div class="table-wrap"><table class="tight pin">
-    <thead><tr><th>Product</th><th>Category</th><th class="r">Stock</th><th class="r">Min</th><th class="r">Unit price</th><th class="r">Cost price</th><th class="r">Stock value</th><th class="r">Sold</th><th class="r">Sales</th><th>Supplier</th><th>Status</th><th>Receive</th></tr></thead>
+    <thead><tr><th>Product</th><th>Category</th><th class="r">Stock</th><th class="r">Min</th><th class="r">Unit price</th><th class="r">Cost price</th><th class="r">Stock value</th><th class="r">Sold</th><th class="r">Sales</th><th>Supplier</th><th>Status</th><th>Actions</th></tr></thead>
     <tbody>{% for r in rows %}<tr>
       <td><b>{{ r.name }}</b><div class="muted num">{{ r.sku }}</div></td><td>{{ r.category }}</td>
       <td class="r"><b>{{ r.stock }}</b></td><td class="r">{{ r.min_stock }}</td>
       <td class="r">₹{{ r.price|inr }}</td><td class="r">₹{{ r.cost_price|inr }}</td><td class="r">₹{{ r.value|inr }}</td>
       <td class="r">{{ r.units_sold|inr }}</td><td class="r">{{ r.sales|money }}</td><td class="muted clip" title="{{ r.supplier }}">{{ r.supplier }}</td>
       <td>{{ status_badge(r.status) }}{% if r.cover is not none and r.stock > 0 %}<div class="muted">{{ r.cover|round|int }} days cover</div>{% endif %}</td>
-      <td><form method="post" action="{{ url_for('restock', pid=r.product_id) }}" style="display:flex;gap:6px"><input type="number" name="quantity" min="1" placeholder="Qty" style="width:58px;padding:4px 6px" required><button class="btn ghost sm">Add</button></form></td>
+      <td style="white-space:nowrap;display:flex;gap:4px;align-items:center">
+        <form method="post" action="{{ url_for('restock', pid=r.product_id) }}" style="display:flex;gap:4px">
+          <input type="number" name="quantity" min="1" placeholder="+Qty" style="width:52px;padding:3px 5px" required>
+          <button class="btn ghost sm">Stock</button>
+        </form>
+        <button type="button" class="btn ghost sm" onclick="openProductEdit({{ r|tojson }})">Edit</button>
+        <form method="post" action="{{ url_for('delete_product', pid=r.product_id) }}" onsubmit="return confirm('Delete product {{ r.name }}?')" style="display:inline">
+          <button class="btn link" title="Delete product">✕</button>
+        </form>
+      </td>
     </tr>{% else %}<tr><td colspan="12" class="muted" style="text-align:center;padding:30px">No products match these filters.</td></tr>{% endfor %}</tbody>
   </table></div>
 </div>
+
+<dialog id="productModal" class="modal">
+  <div class="modal-h">
+    <h3>Edit Product</h3>
+    <button type="button" class="modal-close" onclick="document.getElementById('productModal').close()">&times;</button>
+  </div>
+  <form id="productEditForm" method="post" class="stack">
+    <div class="field"><label>Product Name</label><input name="name" id="pe_name" required></div>
+    <div class="field"><label>Category</label><input name="category" id="pe_category" list="cats_edit" required><datalist id="cats_edit">{% for c in categories %}<option>{{ c }}</option>{% endfor %}</datalist></div>
+    <div class="grid g2">
+      <div class="field"><label>Unit price (₹)</label><input type="number" name="price" id="pe_price" min="0" step="0.01" required></div>
+      <div class="field"><label>Cost price (₹)</label><input type="number" name="cost_price" id="pe_cost_price" min="0" step="0.01" required></div>
+    </div>
+    <div class="grid g2">
+      <div class="field"><label>Current stock</label><input type="number" name="stock" id="pe_stock" min="0" required></div>
+      <div class="field"><label>Minimum stock</label><input type="number" name="min_stock" id="pe_min_stock" min="0" required></div>
+    </div>
+    <div class="field"><label>Supplier</label><input name="supplier" id="pe_supplier"></div>
+    <div class="modal-f">
+      <button type="button" class="btn ghost" onclick="document.getElementById('productModal').close()">Cancel</button>
+      <button class="btn">Save Product</button>
+    </div>
+  </form>
+</dialog>
 {% endblock %}
 {% block scripts %}
 <script>
+function openProductEdit(p) {
+  const modal = document.getElementById('productModal');
+  const form = document.getElementById('productEditForm');
+  form.action = '/inventory/edit/' + p.product_id;
+  document.getElementById('pe_name').value = p.name;
+  document.getElementById('pe_category').value = p.category;
+  document.getElementById('pe_price').value = p.price;
+  document.getElementById('pe_cost_price').value = p.cost_price;
+  document.getElementById('pe_stock').value = p.stock;
+  document.getElementById('pe_min_stock').value = p.min_stock;
+  document.getElementById('pe_supplier').value = p.supplier || '';
+  modal.showModal();
+}
 BI.bar('c1', {{ inv.by_category|map(attribute=0)|list|tojson }}, [{label: 'Stock value', data: {{ inv.by_category|map(attribute=1)|map(attribute='value')|list|tojson }}, color: BI.C.violet}], {kind: 'money'});
 const ST = ['In Stock', 'Low Stock', 'Out of Stock', 'Overstock'];
 const SC = {{ inv.counts|tojson }};

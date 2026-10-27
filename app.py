@@ -197,6 +197,34 @@ def delete_expense(eid):
     return redirect(url_for("expenses"))
 
 
+@app.route("/expenses/edit/<int:eid>", methods=["POST"])
+@login_required
+def edit_expense(eid):
+    fm = request.form
+    try:
+        amount = float(fm["amount"])
+        if amount <= 0:
+            raise ValueError
+        expense_date = fm["expense_date"].strip()
+        category = fm["category"].strip()
+        description = fm["description"].strip() or "Expense"
+        vendor = fm.get("vendor", "").strip()
+        payment_method = fm.get("payment_method", "Bank Transfer").strip()
+        cur = db.query("SELECT expense_id FROM expenses WHERE expense_id = %s", (eid,))
+        if not cur:
+            flash("Expense record not found.", "bad")
+            return redirect(url_for("expenses"))
+        db.execute("""UPDATE expenses 
+                      SET expense_date = %s, category = %s, description = %s, vendor = %s, 
+                          amount = %s, payment_method = %s 
+                      WHERE expense_id = %s""",
+                   (expense_date, category, description, vendor, amount, payment_method, eid))
+        flash("Expense updated. Financial totals and charts refreshed.", "good")
+    except (KeyError, ValueError):
+        flash("Please enter a valid date, category and positive amount.", "bad")
+    return redirect(url_for("expenses"))
+
+
 @app.route("/anomalies")
 @login_required
 def anomalies():
@@ -237,14 +265,68 @@ def restock(pid):
 def add_product():
     fm = request.form
     try:
+        price = float(fm["price"])
+        cost_price = float(fm["cost_price"])
+        stock = int(fm["stock"])
+        min_stock = int(fm["min_stock"])
+        if price < 0 or cost_price < 0 or stock < 0 or min_stock < 0:
+            raise ValueError("Prices and stock numbers must be non-negative.")
         db.execute("""INSERT INTO products (sku, name, category, price, cost_price, stock, min_stock, supplier, description, created_at)
                       VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)""",
-                   (fm["sku"].strip().upper(), fm["name"].strip(), fm["category"].strip(), float(fm["price"]),
-                    float(fm["cost_price"]), int(fm["stock"]), int(fm["min_stock"]), fm.get("supplier", "").strip(),
+                   (fm["sku"].strip().upper(), fm["name"].strip(), fm["category"].strip(), price,
+                    cost_price, stock, min_stock, fm.get("supplier", "").strip(),
                     "", date.today().isoformat() + " 09:00:00"))
         flash("Product added.", "good")
+    except ValueError as e:
+        flash(str(e), "bad")
     except Exception:
         flash("Could not add product - check the values (SKU must be unique).", "bad")
+    return redirect(url_for("inventory"))
+
+
+@app.route("/inventory/edit/<int:pid>", methods=["POST"])
+@login_required
+def edit_product(pid):
+    fm = request.form
+    try:
+        name = fm["name"].strip()
+        category = fm["category"].strip()
+        price = float(fm["price"])
+        cost_price = float(fm["cost_price"])
+        stock = int(fm["stock"])
+        min_stock = int(fm["min_stock"])
+        supplier = fm.get("supplier", "").strip()
+        if price < 0 or cost_price < 0 or stock < 0 or min_stock < 0 or not name:
+            raise ValueError
+        cur = db.query("SELECT product_id FROM products WHERE product_id = %s", (pid,))
+        if not cur:
+            flash("Product not found.", "bad")
+            return redirect(url_for("inventory"))
+        db.execute("""UPDATE products 
+                      SET name = %s, category = %s, price = %s, cost_price = %s, 
+                          stock = %s, min_stock = %s, supplier = %s 
+                      WHERE product_id = %s""",
+                   (name, category, price, cost_price, stock, min_stock, supplier, pid))
+        flash("Product '%s' updated." % name, "good")
+    except (KeyError, ValueError):
+        flash("Please enter valid non-negative values for product details.", "bad")
+    return redirect(url_for("inventory"))
+
+
+@app.route("/inventory/delete/<int:pid>", methods=["POST"])
+@login_required
+def delete_product(pid):
+    cur = db.query("SELECT name FROM products WHERE product_id = %s", (pid,))
+    if not cur:
+        flash("Product not found.", "bad")
+        return redirect(url_for("inventory"))
+    name = cur[0]["name"]
+    order_count = db.query("SELECT COUNT(*) AS n FROM order_items WHERE product_id = %s", (pid,))[0]["n"]
+    if order_count > 0:
+        flash("Cannot delete product '%s' because it has %d order history records. Adjust stock to 0 to discontinue instead." % (name, order_count), "bad")
+    else:
+        db.execute("DELETE FROM products WHERE product_id = %s", (pid,))
+        flash("Product '%s' deleted." % name, "good")
     return redirect(url_for("inventory"))
 
 
@@ -271,7 +353,7 @@ def forecast():
     rows = sorted(fc.values(), key=lambda x: (order[x["risk"]], -x["next_month"]))
     pid = request.args.get("product", type=int)
     cur = fc.get(pid) or (rows[0] if rows else None)
-    months = d["months"]
+    months = d.get("baseline_months") or d["months"]
     labels = [analytics.label(m) for m in months] + [analytics.label(m) for m, _ in cur["future"]] if cur else []
     acc = [x["accuracy"] for x in rows if x["accuracy"] is not None]
     return render_template("forecast.html", active="forecast", rows=rows, cur=cur, labels=labels,
@@ -403,10 +485,11 @@ def update_order(oid):
     elif cur[0]["status"] == "Cancelled":
         flash("A cancelled order cannot be reopened.", "bad")
     elif new != cur[0]["status"]:
-        if new == "Cancelled":                           # put the stock back
-            for it in db.query("SELECT product_id, quantity FROM order_items WHERE order_id = %s", (oid,)):
-                db.execute("UPDATE products SET stock = stock + %s WHERE product_id = %s", (it["quantity"], it["product_id"]))
-        db.execute("UPDATE orders SET status = %s WHERE order_id = %s", (new, oid))
+        with db.transaction() as tx:
+            if new == "Cancelled":                           # put the stock back
+                for it in tx.query("SELECT product_id, quantity FROM order_items WHERE order_id = %s", (oid,)):
+                    tx.execute("UPDATE products SET stock = stock + %s WHERE product_id = %s", (it["quantity"], it["product_id"]))
+            tx.execute("UPDATE orders SET status = %s WHERE order_id = %s", (new, oid))
         flash("Order #%d marked %s." % (oid, new), "good")
     return redirect(request.referrer or url_for("orders"))
 
@@ -523,26 +606,50 @@ def shop_cart():
     rows, total = _cart_rows()
     if request.method == "POST":
         address = request.form.get("address", "").strip()
-        short = [r for r in rows if r["qty"] > int(r["stock"])]
-        if not rows:
+        cart = session.get("cart", {})
+        if not rows or not cart:
             flash("Your cart is empty.", "bad")
-        elif not address:
+            return redirect(url_for("shop_cart"))
+        if not address:
             flash("Please enter a delivery address.", "bad")
-        elif short:
-            flash("Not enough stock for %s (only %d left)." % (short[0]["name"], int(short[0]["stock"])), "bad")
-        else:
-            oid = db.execute("""INSERT INTO orders (customer_id, total_amount, address, status, order_date)
-                                VALUES (%s, %s, %s, %s, %s)""",
-                             (session["customer_id"], total, address, "Pending",
-                              datetime.now().strftime("%Y-%m-%d %H:%M:%S")))
-            for r in rows:
-                db.execute("""INSERT INTO order_items (order_id, product_id, quantity, unit_price, unit_cost)
-                              VALUES (%s, %s, %s, %s, %s)""",
-                           (oid, r["product_id"], r["qty"], float(r["price"]), float(r["cost_price"])))
-                db.execute("UPDATE products SET stock = stock - %s WHERE product_id = %s", (r["qty"], r["product_id"]))
-            session["cart"] = {}
-            flash("Order #%d placed. Thank you!" % oid, "good")
-            return redirect(url_for("shop_orders"))
+            return redirect(url_for("shop_cart"))
+        try:
+            with db.transaction() as tx:
+                pids = [int(pid) for pid in cart.keys()]
+                ph = ", ".join(["%s"] * len(pids))
+                current_prods = tx.query(
+                    "SELECT product_id, name, price, cost_price, stock FROM products WHERE product_id IN (%s)" % ph,
+                    pids
+                )
+                prod_map = {p["product_id"]: p for p in current_prods}
+                for pid_str, req_qty in cart.items():
+                    pid = int(pid_str)
+                    p = prod_map.get(pid)
+                    if not p:
+                        raise ValueError("A selected product is no longer in the catalogue.")
+                    if req_qty > p["stock"]:
+                        raise ValueError("Insufficient stock for %s (requested %d, only %d available)."
+                                         % (p["name"], req_qty, p["stock"]))
+                verified_total = sum(req_qty * float(prod_map[int(pid)]["price"]) for pid, req_qty in cart.items())
+                oid = tx.execute("""INSERT INTO orders (customer_id, total_amount, address, status, order_date)
+                                    VALUES (%s, %s, %s, %s, %s)""",
+                                 (session["customer_id"], verified_total, address, "Pending",
+                                  datetime.now().strftime("%Y-%m-%d %H:%M:%S")))
+                for pid_str, req_qty in cart.items():
+                    pid = int(pid_str)
+                    p = prod_map[pid]
+                    tx.execute("""INSERT INTO order_items (order_id, product_id, quantity, unit_price, unit_cost)
+                                  VALUES (%s, %s, %s, %s, %s)""",
+                               (oid, pid, req_qty, float(p["price"]), float(p["cost_price"])))
+                    tx.execute("UPDATE products SET stock = stock - %s WHERE product_id = %s AND stock >= %s",
+                               (req_qty, pid, req_qty))
+                session["cart"] = {}
+                flash("Order #%d placed successfully. Thank you!" % oid, "good")
+                return redirect(url_for("shop_orders"))
+        except ValueError as e:
+            flash(str(e), "bad")
+        except Exception:
+            flash("Unable to complete order. Please try again.", "bad")
         return redirect(url_for("shop_cart"))
     return render_template("shop_cart.html", tab="cart", rows=rows, total=total)
 
@@ -559,6 +666,25 @@ def shop_orders():
                               WHERE i.order_id IN (%s)""" % ", ".join(["%s"] * len(ids)), ids):
             items.setdefault(it["order_id"], []).append(it)
     return render_template("shop_orders.html", tab="orders", orders=orders_, items=items)
+
+
+@app.route("/shop/orders/cancel/<int:oid>", methods=["POST"])
+@customer_required
+def shop_order_cancel(oid):
+    cur = db.query("SELECT order_id, customer_id, status FROM orders WHERE order_id = %s", (oid,))
+    if not cur or cur[0]["customer_id"] != session["customer_id"]:
+        flash("Order not found.", "bad")
+    elif cur[0]["status"] != "Pending":
+        flash("Only pending orders can be cancelled.", "bad")
+    else:
+        with db.transaction() as tx:
+            items = tx.query("SELECT product_id, quantity FROM order_items WHERE order_id = %s", (oid,))
+            for it in items:
+                tx.execute("UPDATE products SET stock = stock + %s WHERE product_id = %s",
+                           (it["quantity"], it["product_id"]))
+            tx.execute("UPDATE orders SET status = 'Cancelled' WHERE order_id = %s", (oid,))
+        flash("Order #%d has been cancelled and items returned to stock." % oid, "good")
+    return redirect(url_for("shop_orders"))
 
 
 # ── CSV exports ──────────────────────────────────────────────────────────────

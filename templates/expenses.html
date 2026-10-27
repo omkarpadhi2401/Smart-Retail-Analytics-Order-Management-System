@@ -64,13 +64,49 @@
       <td class="num">{{ e.expense_date }}</td><td><span class="badge b-mute">{{ e.category }}</span></td><td>{{ e.description }}</td>
       <td>{{ e.vendor }}</td><td class="muted">{{ e.payment_method }}</td><td class="r"><b>₹{{ e.amount|inr }}</b></td>
       <td>{% if e.expense_id in ids %}<span class="badge b-bad">⚠ Unusual</span>{% else %}<span class="badge b-good">Normal</span>{% endif %}</td>
-      <td><form method="post" action="{{ url_for('delete_expense', eid=e.expense_id) }}" onsubmit="return confirm('Delete this expense?')"><button class="btn link">Delete</button></form></td>
+      <td style="white-space:nowrap;text-align:right">
+        <button type="button" class="btn ghost sm" onclick="openExpenseEdit({{ e|tojson }})">Edit</button>
+        <form method="post" action="{{ url_for('delete_expense', eid=e.expense_id) }}" onsubmit="return confirm('Delete this expense?')" style="display:inline-block;margin-left:4px">
+          <button class="btn link">Delete</button>
+        </form>
+      </td>
     </tr>{% else %}<tr><td colspan="8" class="muted" style="text-align:center;padding:30px">No expenses match these filters.</td></tr>{% endfor %}</tbody>
   </table></div>
 </div>
+
+<dialog id="expenseModal" class="modal">
+  <div class="modal-h">
+    <h3>Edit Expense</h3>
+    <button type="button" class="modal-close" onclick="document.getElementById('expenseModal').close()">&times;</button>
+  </div>
+  <form id="expenseEditForm" method="post" class="stack">
+    <div class="field"><label>Date</label><input type="date" name="expense_date" id="ee_date" required></div>
+    <div class="field"><label>Category</label><select name="category" id="ee_category">{% for c in categories %}<option>{{ c }}</option>{% endfor %}</select></div>
+    <div class="field"><label>Description</label><input name="description" id="ee_desc" required></div>
+    <div class="field"><label>Vendor</label><input name="vendor" id="ee_vendor"></div>
+    <div class="field"><label>Amount (₹)</label><input type="number" name="amount" id="ee_amount" min="1" step="0.01" required></div>
+    <div class="field"><label>Payment method</label><select name="payment_method" id="ee_payment"><option>Bank Transfer</option><option>UPI</option><option>Cash</option><option>Credit Card</option><option>Auto Debit</option></select></div>
+    <div class="modal-f">
+      <button type="button" class="btn ghost" onclick="document.getElementById('expenseModal').close()">Cancel</button>
+      <button class="btn">Save Changes</button>
+    </div>
+  </form>
+</dialog>
 {% endblock %}
 {% block scripts %}
 <script>
+function openExpenseEdit(e) {
+  const modal = document.getElementById('expenseModal');
+  const form = document.getElementById('expenseEditForm');
+  form.action = '/expenses/edit/' + e.expense_id;
+  document.getElementById('ee_date').value = e.expense_date;
+  document.getElementById('ee_category').value = e.category;
+  document.getElementById('ee_desc').value = e.description;
+  document.getElementById('ee_vendor').value = e.vendor || '';
+  document.getElementById('ee_amount').value = e.amount;
+  document.getElementById('ee_payment').value = e.payment_method || 'Bank Transfer';
+  modal.showModal();
+}
 const L = {{ f.months|map(attribute='label')|list|tojson }};
 const CM = {{ f.cat_month|tojson }};
 const cats = {{ f.by_category|map(attribute=0)|list|tojson }}.filter(c => c !== 'Inventory Purchase');

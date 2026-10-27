@@ -9,6 +9,7 @@ Set FORCE_SQLITE=1 to skip MySQL.
 """
 import os
 import sqlite3
+from contextlib import contextmanager
 from datetime import date, datetime
 from decimal import Decimal
 
@@ -84,6 +85,48 @@ def execute(sql, params=()):
         con.commit()
         VERSION += 1
         return cur.lastrowid
+    finally:
+        con.close()
+
+
+class Transaction:
+    """Helper for executing statements within an atomic transaction."""
+    def __init__(self, con, backend):
+        self.con = con
+        self.backend = backend
+
+    def execute(self, sql, params=()):
+        if self.backend == "MySQL":
+            cur = self.con.cursor()
+            cur.execute(sql, tuple(params))
+            return cur.lastrowid
+        cur = self.con.execute(sql.replace("%s", "?"), tuple(params))
+        return cur.lastrowid
+
+    def query(self, sql, params=()):
+        if self.backend == "MySQL":
+            cur = self.con.cursor(dictionary=True)
+            cur.execute(sql, tuple(params))
+            rows = cur.fetchall()
+        else:
+            rows = [dict(r) for r in self.con.execute(sql.replace("%s", "?"), tuple(params)).fetchall()]
+        return [{k: _clean(v) for k, v in r.items()} for r in rows]
+
+
+@contextmanager
+def transaction():
+    """Execute multiple statements in a single atomic transaction.
+    Rolls back automatically on exception; commits and bumps VERSION on success."""
+    global VERSION
+    con = _connect()
+    try:
+        tx = Transaction(con, BACKEND)
+        yield tx
+        con.commit()
+        VERSION += 1
+    except Exception:
+        con.rollback()
+        raise
     finally:
         con.close()
 

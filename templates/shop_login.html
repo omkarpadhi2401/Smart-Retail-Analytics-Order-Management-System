@@ -6,42 +6,48 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
-<div class="login">
-  <section class="hero">
-    <div class="brand-mark" style="margin-bottom:24px">BF</div>
-    <h1>Customer Panel</h1>
-    <p>Browse the product catalogue, add items to your cart, place orders and track their status.</p>
-    <ul><li>Live stock availability</li><li>Order history with status tracking</li><li>Every order updates the business's inventory and sales analytics</li></ul>
-  </section>
-  <section class="form">
-    <div class="box">
-      <h2 style="font-size:22px">{{ 'Customer sign in' if mode == 'login' else 'Create your account' }}</h2>
-      <p class="muted" style="margin:4px 0 20px">{{ 'Sign in to shop and see your orders.' if mode == 'login' else 'It takes less than a minute.' }}</p>
+<div class="auth-wrap">
+  <div class="auth-card">
+    <div class="auth-header">
+      <div class="brand-mark" style="margin:0 auto 16px">BF</div>
+      <h2>Customer Portal</h2>
+      <p class="muted" style="margin-top:4px">Browse catalogue, shop products &amp; track orders</p>
+    </div>
+    <div class="auth-body">
+      <h3 style="font-size:18px;margin-bottom:6px">{{ 'Customer Sign In' if mode == 'login' else 'Create Customer Account' }}</h3>
+      <p class="muted" style="margin:0 0 18px">{{ 'Sign in to place orders and track delivery status.' if mode == 'login' else 'Register a new customer account in seconds.' }}</p>
       {% with msgs = get_flashed_messages(with_categories=true) %}
         {% for cat, m in msgs %}<div class="flash {{ cat }}">{{ m }}</div>{% endfor %}
       {% endwith %}
       {% if mode == 'login' %}
       <form method="post" class="stack">
-        <div class="field"><label>Email</label><input type="email" name="email" value="customer@shop.com" required></div>
+        <div class="field"><label>Email address</label><input type="email" name="email" value="customer@shop.com" required autofocus></div>
         <div class="field"><label>Password</label><input type="password" name="password" value="customer123" required></div>
-        <button class="btn">Sign in</button>
+        <button class="btn" style="width:100%;justify-content:center;padding:10px;margin-top:6px">Sign In to Shop</button>
       </form>
-      <p style="margin-top:16px">New here? <a href="{{ url_for('shop_register') }}"><b>Create an account</b></a></p>
-      <p class="muted">Customer login: customer@shop.com / customer123</p>
+      <div class="auth-meta">
+        <p>New customer? <a href="{{ url_for('shop_register') }}"><b>Create an account</b></a></p>
+        <p class="muted">Demo credentials: <code>customer@shop.com</code> / <code>customer123</code></p>
+        <div class="auth-divider"></div>
+        <p class="muted">Staff member? <a href="{{ url_for('login') }}">Open business dashboard</a></p>
+      </div>
       {% else %}
       <form method="post" class="stack">
-        <div class="field"><label>Full name</label><input name="name" required></div>
-        <div class="field"><label>Email</label><input type="email" name="email" required></div>
-        <div class="field"><label>Phone</label><input name="phone" maxlength="15"></div>
-        <div class="field"><label>City</label><input name="city"></div>
+        <div class="field"><label>Full name</label><input name="name" placeholder="Full name" required autofocus></div>
+        <div class="field"><label>Email address</label><input type="email" name="email" placeholder="you@example.com" required></div>
+        <div class="field"><label>Phone</label><input name="phone" placeholder="+91 98765 43210" maxlength="15"></div>
+        <div class="field"><label>City</label><input name="city" placeholder="e.g. Mumbai"></div>
         <div class="field"><label>Password (min 6 characters)</label><input type="password" name="password" minlength="6" required></div>
-        <button class="btn">Create account</button>
+        <button class="btn" style="width:100%;justify-content:center;padding:10px;margin-top:6px">Create Account</button>
       </form>
-      <p style="margin-top:16px">Already registered? <a href="{{ url_for('shop_login') }}"><b>Sign in</b></a></p>
+      <div class="auth-meta">
+        <p>Already registered? <a href="{{ url_for('shop_login') }}"><b>Sign in here</b></a></p>
+        <div class="auth-divider"></div>
+        <p class="muted">Staff member? <a href="{{ url_for('login') }}">Open business dashboard</a></p>
+      </div>
       {% endif %}
-      <p class="muted">Staff member? <a href="{{ url_for('login') }}">Open the business dashboard</a></p>
     </div>
-  </section>
+  </div>
 </div>
 </body>
 </html>

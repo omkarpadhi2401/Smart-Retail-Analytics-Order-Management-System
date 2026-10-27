@@ -85,21 +85,23 @@ def load():
         e["expense_date"] = str(e["expense_date"])[:10]
         e["month"] = e["expense_date"][:7]
         e["amount"] = float(e["amount"])
-    months = sorted({r["month"] for r in sold})
+    all_sold = list(sold)
+    all_months = sorted({r["month"] for r in all_sold} | {e["month"] for e in expenses})
+    if not all_months:
+        all_months = [datetime.now().strftime("%Y-%m")]
     rev = defaultdict(float)
-    for r in sold:
+    for r in all_sold:
         rev[r["month"]] += r["revenue"]
-    # A month that has only just started (e.g. the first new orders from the customer
-    # panel) would distort growth, forecasts and the health score, so trailing months
-    # with under 25% of a normal month's revenue are reported separately as "in progress".
-    typical = statistics.median(rev.values()) if rev else 0
+    positive_revs = [v for v in rev.values() if v > 0]
+    typical = statistics.median(positive_revs) if positive_revs else 0
+    baseline_months = list(all_months)
     partial = []
-    while len(months) > 3 and rev[months[-1]] < 0.25 * typical:
-        partial.insert(0, months.pop())
-    live = [r for r in sold if r["month"] in partial]
-    sold = [r for r in sold if r["month"] not in partial]
-    d = {"products": products, "lines": sold, "expenses": expenses, "months": months,
-         "last_date": max((r["order_date"][:10] for r in sold), default=""),
+    while len(baseline_months) > 3 and rev[baseline_months[-1]] < 0.25 * typical:
+        partial.insert(0, baseline_months.pop())
+    live = [r for r in all_sold if r["month"] in partial]
+    d = {"products": products, "lines": all_sold, "all_lines": all_sold, "expenses": expenses,
+         "months": all_months, "baseline_months": baseline_months,
+         "last_date": max((r["order_date"][:10] for r in all_sold), default=""),
          "in_progress": {"months": [label(m) for m in partial], "revenue": sum(r["revenue"] for r in live),
                          "orders": len({r["order_id"] for r in live}), "units": sum(r["quantity"] for r in live)}}
     d["finance"] = _finance(d)
@@ -268,12 +270,14 @@ def _sales(d):
 def _seasonal_index(d):
     """Store-wide seasonal index per calendar month (1.0 = average month),
     measured after removing the overall linear trend."""
-    totals = [x["units"] for x in d["finance"]["months"]]
+    b_months = d.get("baseline_months") or d["months"]
+    rows_by_m = {x["month"]: x for x in d["finance"]["months"]}
+    totals = [rows_by_m[m]["units"] for m in b_months if m in rows_by_m]
     a, b = _fit_line(totals)
     idx = {}
-    for i, m in enumerate(d["months"]):
+    for i, m in enumerate(b_months):
         trend = a + b * i
-        idx[m[5:7]] = min(1.35, max(0.7, totals[i] / trend)) if trend > 0 else 1.0
+        idx[m[5:7]] = min(1.35, max(0.7, totals[i] / trend)) if (trend > 0 and i < len(totals)) else 1.0
     return idx
 
 
@@ -294,15 +298,18 @@ def _predict(series, seas, months, horizon):
 
 
 def _forecast(d, p, horizon=3):
-    months = d["months"]
-    series = d["sales"]["pm"][p["product_id"]]
+    b_months = d.get("baseline_months") or d["months"]
+    all_months = d["months"]
+    m_indices = [all_months.index(m) for m in b_months if m in all_months]
+    full_series = d["sales"]["pm"][p["product_id"]]
+    series = [full_series[i] for i in m_indices]
     seas = _seasonal_index(d)
-    fitted, future, slope = _predict(series, seas, months, horizon)
+    fitted, future, slope = _predict(series, seas, b_months, horizon)
 
     # Back-test: train on all but the last 3 months, predict those 3, compare.
     accuracy = None
     if len(series) >= 9:
-        _, test, _ = _predict(series[:-3], seas, months[:-3], 3)
+        _, test, _ = _predict(series[:-3], seas, b_months[:-3], 3)
         actual = series[-3:]
         if sum(actual):
             wape = sum(abs(a - f[1]) for a, f in zip(actual, test)) / sum(actual)

@@ -1,18 +1,18 @@
 /* AI-Powered Business Finance and Inventory Analysis System — UI theme */
 :root {
-  --bg: #f4f6f9; --surface: #ffffff; --line: #e4e7ec; --line-soft: #eef0f4;
-  --ink: #101828; --ink-2: #475467; --ink-3: #8a94a6;
-  --nav: #0f1b2d; --nav-2: #18273f; --nav-ink: #b6c2d6;
-  --brand: #2a78d6; --brand-dark: #1c5cab; --brand-soft: #e8f1fc;
-  --good: #0b7a35; --good-bg: #e6f6ec; --warn: #9a6200; --warn-bg: #fff4d6;
-  --bad: #b42318; --bad-bg: #fdecea; --info-bg: #e8f1fc;
-  --radius: 12px; --shadow: 0 1px 2px rgba(16, 24, 40, .05), 0 1px 3px rgba(16, 24, 40, .06);
+  --bg: #f8fafc; --surface: #ffffff; --line: #e2e8f0; --line-soft: #f1f5f9;
+  --ink: #0f172a; --ink-2: #475569; --ink-3: #94a3b8;
+  --nav: #0f172a; --nav-2: #1e293b; --nav-ink: #cbd5e1;
+  --brand: #2563eb; --brand-dark: #1d4ed8; --brand-soft: #eff6ff;
+  --good: #16a34a; --good-bg: #f0fdf4; --warn: #d97706; --warn-bg: #fffbeb;
+  --bad: #dc2626; --bad-bg: #fef2f2; --info-bg: #eff6ff;
+  --radius: 8px; --shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05), 0 1px 2px -1px rgba(0, 0, 0, 0.05);
 }
 * { box-sizing: border-box; }
 html, body { margin: 0; }
 body { font-family: "Inter", "Segoe UI", system-ui, -apple-system, Roboto, Arial, sans-serif;
   background: var(--bg); color: var(--ink); font-size: 14px; line-height: 1.5; }
-a { color: var(--brand-dark); text-decoration: none; }
+a { color: var(--brand); text-decoration: none; }
 a:hover { text-decoration: underline; }
 h1, h2, h3 { margin: 0; letter-spacing: -.01em; }
 .num { font-variant-numeric: tabular-nums; }
@@ -22,7 +22,7 @@ h1, h2, h3 { margin: 0; letter-spacing: -.01em; }
 .sidebar { width: 248px; flex: 0 0 248px; background: var(--nav); color: var(--nav-ink);
   position: sticky; top: 0; height: 100vh; overflow-y: auto; display: flex; flex-direction: column; }
 .brand { padding: 20px 20px 16px; display: flex; gap: 12px; align-items: center; border-bottom: 1px solid rgba(255,255,255,.07); }
-.brand-mark { width: 38px; height: 38px; border-radius: 10px; background: linear-gradient(135deg, #3987e5, #1baf7a);
+.brand-mark { width: 38px; height: 38px; border-radius: 8px; background: linear-gradient(135deg, #1e40af, #2563eb);
   display: grid; place-items: center; color: #fff; font-weight: 700; font-size: 15px; flex: none; }
 .brand-name { color: #fff; font-weight: 650; font-size: 14px; line-height: 1.25; }
 .brand-sub { font-size: 11px; color: #8fa0bb; }
@@ -150,23 +150,39 @@ details.panel > summary::-webkit-details-marker { display: none; }
 .tabs a { padding: 6px 12px; border-radius: 999px; border: 1px solid var(--line); background: #fff; color: var(--ink-2); font-size: 12.5px; font-weight: 600; }
 .tabs a.on { background: var(--ink); color: #fff; border-color: var(--ink); text-decoration: none; }
 
-/* ── Login ── */
-.login { min-height: 100vh; display: grid; grid-template-columns: 1.1fr 1fr; }
-.login .hero { background: linear-gradient(150deg, #0f1b2d 0%, #16365f 60%, #1c5cab 100%); color: #fff; padding: 56px; display: flex; flex-direction: column; justify-content: center; }
-.login .hero h1 { font-size: 34px; line-height: 1.15; max-width: 520px; }
-.login .hero p { color: #b6c2d6; max-width: 480px; font-size: 15px; }
-.login .hero ul { color: #d5deeb; padding-left: 18px; line-height: 1.9; }
-.login .form { display: grid; place-items: center; padding: 32px; }
-.login .box { width: 100%; max-width: 360px; }
-.login .box input { width: 100%; padding: 10px 12px; }
-.login .box .btn { width: 100%; justify-content: center; padding: 10px; margin-top: 6px; }
+/* ── Centered Auth Pages ── */
+.auth-wrap { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 28px 16px; background: var(--bg); }
+.auth-card { width: 100%; max-width: 440px; background: var(--surface); border: 1px solid var(--line);
+  border-radius: var(--radius); box-shadow: 0 4px 16px rgba(15, 23, 42, .06), 0 1px 3px rgba(15, 23, 42, .04);
+  padding: 34px 30px; }
+.auth-header { text-align: center; margin-bottom: 22px; }
+.auth-header h2 { font-size: 20px; font-weight: 700; color: var(--ink); letter-spacing: -.01em; }
+.auth-body { width: 100%; }
+.auth-meta { margin-top: 18px; text-align: center; font-size: 13px; }
+.auth-meta p { margin: 7px 0; }
+.auth-meta code { background: #f1f5f9; padding: 2px 6px; border-radius: 4px; font-size: 12px; }
+.auth-divider { height: 1px; background: var(--line-soft); margin: 12px 0; }
+
+/* ── Modal Dialogs ── */
+dialog.modal { border: 1px solid var(--line); border-radius: var(--radius);
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+  background: var(--surface); padding: 24px; max-width: 520px; width: 92%; }
+dialog.modal::backdrop { background: rgba(15, 23, 42, 0.45); backdrop-filter: blur(2px); }
+.modal-h { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid var(--line); }
+.modal-h h3 { font-size: 16px; font-weight: 650; margin: 0; }
+.modal-close { background: none; border: none; font-size: 20px; cursor: pointer; color: var(--ink-3); line-height: 1; padding: 0 4px; }
+.modal-close:hover { color: var(--ink); }
+.modal-f { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--line); }
+
+/* Compatibility */
+.login { min-height: 100vh; display: flex; align-items: center; justify-content: center; }
 
 @media (max-width: 1150px) { .g4 { grid-template-columns: repeat(2, minmax(0, 1fr)); } .g3, .g21 { grid-template-columns: 1fr; } }
 @media (max-width: 860px) {
   .shell { flex-direction: column; } .sidebar { width: 100%; flex: none; height: auto; position: static; }
   .nav { display: flex; flex-wrap: wrap; gap: 4px; } .nav-group, .side-foot { display: none; }
   .g2, .g4 { grid-template-columns: 1fr; } .content { padding: 16px; } .topbar { padding: 12px 16px; flex-wrap: wrap; position: static; }
-  .login { grid-template-columns: 1fr; } .login .hero { display: none; }
+  .auth-card { padding: 24px 20px; }
 }
 @media print { .sidebar, .topbar .chip, .filters, .btn { display: none !important; } .content { padding: 0; } }
 
