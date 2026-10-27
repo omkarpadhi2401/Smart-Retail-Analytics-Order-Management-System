@@ -1,11 +1,10 @@
 """
-seed.py — deterministic demo-data generator
+seed.py — business data generator
 AI-Powered Business Finance and Inventory Analysis System
-Omkar Padhi | 24101C0003 | INFT-C
 
-Generates 12 months of business data (Oct 2025 – Sep 2026):
-  24 products, 20 customers, 6 staff + payroll, 4,828 sales orders,
-  9,448 order lines and 253 expenses in 8 categories.
+Generates 12 months of realistic business data (Oct 2025 – Sep 2026):
+  34 products, 28 customers, 6 staff + payroll, 5,200 sales orders,
+  10,400 order lines and 253 expenses across 8 categories.
 
 Run `python seed.py` to (re)write database.sql for MySQL.
 db.py also imports generate() to auto-seed an empty database.
@@ -16,7 +15,7 @@ from datetime import date, datetime, timedelta
 
 DB_NAME = "business_finance_db"
 MONTHS = [(2025, 10), (2025, 11), (2025, 12)] + [(2026, m) for m in range(1, 10)]
-N_ORDERS, N_LINES, N_EXPENSES = 4828, 9448, 253
+N_ORDERS, N_LINES, N_EXPENSES = 5200, 10400, 253
 
 # ── Schema (MySQL syntax; db.py adapts it for the SQLite fallback) ───────────
 TABLES = ["customers", "staff", "salaries", "products", "orders", "order_items", "expenses"]
@@ -106,45 +105,65 @@ EXPENSE_CATEGORIES = ["Rent", "Salaries", "Utilities", "Marketing", "Inventory P
 
 # name, category, price, cost, stock, min_stock, supplier, description, demand weight, monthly trend
 PRODUCTS = [
-    # original 10 products of the Smart Retail project
+    # Electronics (7)
     ("Wireless Earbuds", "Electronics", 1299, 810, 140, 40, "Shenzhen Audio Imports", "Bluetooth 5.0, 24hr battery, noise cancellation", 9.0, 0.010),
     ("Smart Watch Pro", "Electronics", 4999, 3350, 46, 15, "Shenzhen Audio Imports", "AMOLED display, heart rate monitor, GPS", 4.2, 0.035),
-    ("Running Shoes", "Footwear", 2499, 1560, 12, 20, "Stride Footwear Co.", "Lightweight mesh upper, cushioned sole", 5.0, 0.000),
-    ("Casual Backpack", "Bags", 1599, 990, 64, 20, "UrbanCarry Mfg.", "30L capacity, laptop compartment, waterproof", 4.0, 0.005),
-    ("Cotton T-Shirt", "Clothing", 599, 330, 260, 80, "Tirupur Textiles", "100% cotton, regular fit, multiple colors", 10.0, 0.000),
-    ("Face Moisturizer", "Beauty", 899, 540, 95, 30, "GlowCare Labs", "SPF 30, hydrating, dermatologist tested", 5.0, 0.012),
-    ("Yoga Mat", "Sports", 799, 470, 0, 15, "FitGear India", "Anti-slip, 6mm thick, eco-friendly", 3.6, 0.008),
-    ("Stainless Steel Bottle", "Kitchen", 699, 400, 150, 40, "Moradabad Steelworks", "1L, double-walled, keeps cold 24hr / hot 12hr", 6.0, 0.000),
     ("Desk Lamp LED", "Electronics", 1199, 760, 310, 20, "BrightHome Electricals", "Touch control, 3 color modes, USB charging port", 3.2, -0.050),
-    ("Protein Powder", "Health", 2199, 1480, 18, 25, "NutriMax Wellness", "1kg, 24g protein per serving, chocolate flavor", 4.4, 0.045),
-    # 14 products added for the finance & inventory system
     ("Wireless Mouse", "Electronics", 749, 450, 8, 25, "Shenzhen Audio Imports", "2.4GHz, silent click, 12-month battery", 7.0, 0.040),
     ("Mechanical Keyboard", "Electronics", 2899, 1900, 34, 12, "Shenzhen Audio Imports", "Blue switches, RGB backlight", 2.8, 0.015),
     ("Bluetooth Speaker", "Electronics", 1899, 1210, 52, 15, "Shenzhen Audio Imports", "20W, IPX7 waterproof", 3.6, 0.000),
     ("Power Bank 20000mAh", "Electronics", 1499, 960, 0, 20, "VoltEdge Power", "22.5W fast charging, dual output", 5.0, 0.020),
-    ("Formal Shirt", "Clothing", 1199, 700, 88, 30, "Tirupur Textiles", "Wrinkle-free cotton blend", 4.4, 0.000),
-    ("Denim Jeans", "Clothing", 1799, 1080, 70, 25, "Tirupur Textiles", "Slim fit, stretch denim", 4.0, -0.010),
+    # Footwear (4)
+    ("Running Shoes", "Footwear", 2499, 1560, 12, 20, "Stride Footwear Co.", "Lightweight mesh upper, cushioned sole", 5.0, 0.000),
+    ("Sports Sandals", "Footwear", 1299, 800, 58, 20, "Stride Footwear Co.", "Quick-dry straps, shock absorbent", 2.8, -0.020),
+    ("Formal Leather Shoes", "Footwear", 2999, 1850, 18, 20, "Stride Footwear Co.", "Classic oxford derby, genuine leather, padded insole", 3.4, 0.005),
+    ("Canvas Sneakers", "Footwear", 1599, 980, 72, 25, "Stride Footwear Co.", "Lightweight lace-up sneakers, vulcanized rubber sole", 4.2, 0.010),
+    # Bags (4)
+    ("Casual Backpack", "Bags", 1599, 990, 64, 20, "UrbanCarry Mfg.", "30L capacity, laptop compartment, waterproof", 4.0, 0.005),
     ("Leather Wallet", "Bags", 899, 520, 9, 15, "UrbanCarry Mfg.", "Genuine leather, RFID blocking", 3.0, 0.005),
     ("Laptop Sleeve 15\"", "Bags", 699, 390, 420, 15, "UrbanCarry Mfg.", "Shock-proof neoprene", 1.6, -0.060),
+    ("Gym Duffel Bag", "Bags", 1299, 780, 36, 15, "UrbanCarry Mfg.", "Waterproof fabric, shoe tunnel, 35L capacity", 3.8, 0.010),
+    # Clothing (4)
+    ("Cotton T-Shirt", "Clothing", 599, 330, 260, 80, "Tirupur Textiles", "100% cotton, regular fit, multiple colors", 10.0, 0.000),
+    ("Formal Shirt", "Clothing", 1199, 700, 88, 30, "Tirupur Textiles", "Wrinkle-free cotton blend", 4.4, 0.000),
+    ("Denim Jeans", "Clothing", 1799, 1080, 70, 25, "Tirupur Textiles", "Slim fit, stretch denim", 4.0, -0.010),
+    ("Classic Polo T-Shirt", "Clothing", 899, 520, 95, 30, "Tirupur Textiles", "100% combed cotton pique, bio-washed", 5.5, 0.005),
+    # Beauty (4)
+    ("Face Moisturizer", "Beauty", 899, 540, 95, 30, "GlowCare Labs", "SPF 30, hydrating, dermatologist tested", 5.0, 0.012),
     ("Vitamin C Serum", "Beauty", 649, 360, 110, 30, "GlowCare Labs", "20% vitamin C, 30ml", 4.6, 0.030),
+    ("Hydrating Gel Sunscreen", "Beauty", 699, 410, 85, 30, "GlowCare Labs", "SPF 50 PA+++, non-sticky water gel, 100ml", 5.4, 0.025),
+    ("Clarifying Charcoal Cleanser", "Beauty", 449, 250, 115, 35, "GlowCare Labs", "Activated charcoal, deep pore cleansing, 150ml", 4.8, 0.010),
+    # Sports (4)
+    ("Yoga Mat", "Sports", 799, 470, 0, 15, "FitGear India", "Anti-slip, 6mm thick, eco-friendly", 3.6, 0.008),
+    ("Dumbbell Set 10kg", "Sports", 1999, 1300, 26, 10, "FitGear India", "Rubber-coated, pair", 2.2, 0.000),
+    ("Adjustable Resistance Bands", "Sports", 749, 420, 65, 20, "FitGear India", "5 levels with door anchor, foam handles, ankle straps", 4.2, 0.020),
+    ("Badminton Racket Carbon Pro", "Sports", 1499, 890, 10, 15, "FitGear India", "High modulus carbon fiber, includes full cover", 3.5, 0.005),
+    # Kitchen (4)
+    ("Stainless Steel Bottle", "Kitchen", 699, 400, 150, 40, "Moradabad Steelworks", "1L, double-walled, keeps cold 24hr / hot 12hr", 6.0, 0.000),
     ("Non-stick Frying Pan", "Kitchen", 1099, 690, 40, 15, "Moradabad Steelworks", "28cm, induction base", 3.0, 0.000),
     ("Electric Kettle", "Kitchen", 1349, 860, 14, 15, "BrightHome Electricals", "1.5L, auto shut-off", 3.2, 0.010),
-    ("Dumbbell Set 10kg", "Sports", 1999, 1300, 26, 10, "FitGear India", "Rubber-coated, pair", 2.2, 0.000),
-    ("Sports Sandals", "Footwear", 1299, 800, 58, 20, "Stride Footwear Co.", "Quick-dry straps", 2.8, -0.020),
+    ("Stainless Steel Knife Set", "Kitchen", 1199, 720, 50, 20, "Moradabad Steelworks", "5-piece chef set with acrylic rotating block", 3.2, 0.000),
+    # Health (4)
+    ("Protein Powder", "Health", 2199, 1480, 18, 25, "NutriMax Wellness", "1kg, 24g protein per serving, chocolate flavor", 4.4, 0.045),
     ("Multivitamin Tablets", "Health", 549, 310, 130, 40, "NutriMax Wellness", "60 tablets, daily essentials", 5.0, 0.015),
+    ("Omega-3 Triple Strength", "Health", 899, 520, 90, 30, "NutriMax Wellness", "1000mg fish oil, 60 enterically coated softgels", 4.6, 0.020),
+    ("Electrolyte Energy Drink Mix", "Health", 499, 280, 140, 45, "NutriMax Wellness", "Orange burst flavour, 30 sachets with B-vitamins", 5.2, 0.015),
 ]
 CAT_CODE = {"Electronics": "ELE", "Footwear": "FTW", "Bags": "BAG", "Clothing": "CLO",
             "Beauty": "BTY", "Sports": "SPT", "Kitchen": "KIT", "Health": "HLT"}
 
 CUSTOMERS = [  # name, type, city
-    ("Omkar Padhi", "Retail", "Pune"), ("Priya Singh", "Retail", "Bengaluru"), ("Arjun Mehta", "Retail", "Mumbai"),
+    ("Aarav Sharma", "Retail", "Pune"), ("Priya Singh", "Retail", "Bengaluru"), ("Arjun Mehta", "Retail", "Mumbai"),
     ("Sneha Kulkarni", "Retail", "Pune"), ("Rahul Verma", "Retail", "Delhi"), ("Ananya Iyer", "Retail", "Chennai"),
     ("Vikram Desai", "Retail", "Ahmedabad"), ("Neha Joshi", "Retail", "Mumbai"), ("Karan Malhotra", "Retail", "Delhi"),
     ("Pooja Nair", "Retail", "Kochi"), ("Aditya Rao", "Retail", "Hyderabad"), ("Meera Shah", "Retail", "Surat"),
-    ("Rohit Pawar", "Retail", "Nashik"), ("Isha Kapoor", "Retail", "Jaipur"),
+    ("Rohit Pawar", "Retail", "Nashik"), ("Isha Kapoor", "Retail", "Jaipur"), ("Sunil Chawla", "Retail", "Chandigarh"),
+    ("Deepika Nambiar", "Retail", "Bengaluru"), ("Gaurav Singhania", "Retail", "Kolkata"), ("Tanvi Trivedi", "Retail", "Vadodara"),
+    ("Rohan Banerjee", "Retail", "Kolkata"), ("Simran Batra", "Retail", "Lucknow"),
     ("Sunrise Retail Mart", "B2B", "Mumbai"), ("TechZone Distributors", "B2B", "Pune"),
     ("FitLife Gyms Pvt Ltd", "B2B", "Mumbai"), ("GreenLeaf Office Supplies", "B2B", "Thane"),
     ("Metro Corporate Gifting", "B2B", "Navi Mumbai"), ("Campus Store VJTI", "B2B", "Mumbai"),
+    ("Apex Retail Chain", "B2B", "Bengaluru"), ("Zenith Health & Fitness", "B2B", "Delhi"),
 ]
 STAFF = [  # name, email, password, role, salary
     ("Admin User", "admin@shop.com", "admin123", "admin", 55000),
@@ -154,7 +173,7 @@ STAFF = [  # name, email, password, role, salary
     ("Imran Shaikh", "imran@shop.com", "imran123", "warehouse", 19000),
     ("Deepa Pillai", "deepa@shop.com", "deepa123", "support", 17000),
 ]
-DEMO_CUSTOMER = ("omkar.padhi@gmail.com", "omkar123")     # login for the customer panel
+DEMO_CUSTOMER = ("customer@shop.com", "customer123")     # login for the customer panel
 SEASON = [1.12, 1.13, 1.08, 0.94, 0.90, 0.96, 0.97, 1.00, 1.01, 0.97, 0.95, 1.01]
 PURCHASE_FACTOR = [1.00, 1.01, 0.94, 0.90, 1.00, 1.00, 1.03, 0.98, 0.83, 1.00, 1.03, 1.27]
 

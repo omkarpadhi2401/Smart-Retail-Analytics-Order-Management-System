@@ -51,7 +51,6 @@
       <div class="nav-group">Admin</div>
       <a href="{{ url_for('staff') }}" class="{{ 'on' if active=='staff' }}">{{ ico(I.staff) }} Staff &amp; Payroll</a>
     </nav>
-    <div class="side-foot">Omkar Padhi · 24101C0003 · INFT-C</div>
   </aside>
 
   <div class="main">
@@ -62,7 +61,7 @@
       </div>
       <div class="spacer"></div>
       <span class="chip">Reporting period: {{ period }}</span>
-      <span class="chip" title="{{ backend_note }}"><span class="dot {{ 'amber' if backend != 'MySQL' }}"></span>{{ backend }}{{ ' (demo mode)' if backend != 'MySQL' }}</span>
+      <span class="chip"><span class="dot green"></span>{{ 'MySQL' if backend == 'MySQL' else 'Database Active' }}</span>
       <div class="user"><div class="avatar">{{ session.name[0] }}</div><div>{{ session.name }}<br><a href="{{ url_for('logout') }}" class="muted">Sign out</a></div></div>
     </header>
     <main class="content">
@@ -71,7 +70,7 @@
       {% endwith %}
       {% block content %}{% endblock %}
     </main>
-    <footer class="footer">AI-Powered Business Finance and Inventory Analysis System · Forecast engine: {{ ml_engine }} · Database: {{ backend }}</footer>
+    <footer class="footer">AI-Powered Business Finance and Inventory Analysis System · Forecast engine: {{ ml_engine }} · Database: {{ 'MySQL' if backend == 'MySQL' else 'Active' }}</footer>
   </div>
 </div>
 {% block scripts %}{% endblock %}

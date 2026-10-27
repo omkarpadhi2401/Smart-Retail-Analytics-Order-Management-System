@@ -1,6 +1,5 @@
 """
 AI-Powered Business Finance and Inventory Analysis System
-Omkar Padhi | Roll No 24101C0003 | INFT-C
 
 Run:  python app.py   ->  http://127.0.0.1:5000
 Login: admin@shop.com / admin123
@@ -28,6 +27,7 @@ import seed
 
 app = Flask(__name__)
 app.secret_key = os.getenv("SECRET_KEY", "bfi-demo-secret-key")
+app.config["TEMPLATES_AUTO_RELOAD"] = True
 db.init()
 
 

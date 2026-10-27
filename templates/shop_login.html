@@ -22,12 +22,12 @@
       {% endwith %}
       {% if mode == 'login' %}
       <form method="post" class="stack">
-        <div class="field"><label>Email</label><input type="email" name="email" value="omkar.padhi@gmail.com" required></div>
-        <div class="field"><label>Password</label><input type="password" name="password" value="omkar123" required></div>
+        <div class="field"><label>Email</label><input type="email" name="email" value="customer@shop.com" required></div>
+        <div class="field"><label>Password</label><input type="password" name="password" value="customer123" required></div>
         <button class="btn">Sign in</button>
       </form>
       <p style="margin-top:16px">New here? <a href="{{ url_for('shop_register') }}"><b>Create an account</b></a></p>
-      <p class="muted">Demo customer: omkar.padhi@gmail.com / omkar123</p>
+      <p class="muted">Customer login: customer@shop.com / customer123</p>
       {% else %}
       <form method="post" class="stack">
         <div class="field"><label>Full name</label><input name="name" required></div>

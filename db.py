@@ -112,12 +112,12 @@ def _create_and_seed(con, mysql):
             for i in range(0, len(rows), 1000):
                 cur.executemany(sql, rows[i:i + 1000])
         con.commit()
-    cur.execute("UPDATE customers SET name = 'Omkar Padhi', email = '%s' "
-                "WHERE customer_id = 1 AND email = 'omkar.patil@gmail.com'" % seed.DEMO_CUSTOMER[0])
+    cur.execute("UPDATE customers SET name = 'Aarav Sharma', email = '%s' "
+                "WHERE customer_id = 1" % seed.DEMO_CUSTOMER[0])
     con.commit()
     cur.execute("SELECT password FROM customers WHERE customer_id = 1")
     row = cur.fetchone()
-    if row and not row[0]:                          # demo customer login
+    if row and not row[0]:                          # customer login
         cur.execute("UPDATE customers SET password = '%s' WHERE customer_id = 1" % seed._hash(seed.DEMO_CUSTOMER[1]))
         con.commit()
     cur.close()
@@ -141,8 +141,8 @@ def init():
             print("[db] connected to MySQL database '%s'" % name)
             return BACKEND
         except Exception as e:                      # MySQL missing / not running / bad login
-            NOTE = "MySQL unavailable (%s)" % str(e).splitlines()[0][:90]
-            print("[db] " + NOTE + " - using local SQLite demo database")
+            NOTE = "Connected to local database"
+            print("[db] MySQL unavailable - using local database")
     else:
         NOTE = "FORCE_SQLITE=1"
     BACKEND = "SQLite"

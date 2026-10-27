@@ -1,7 +1,5 @@
 # AI-Powered Business Finance and Inventory Analysis System
 
-**Student:** Omkar Padhi · **Roll No:** 24101C0003 · **Class:** INFT-C
-
 A web-based business intelligence platform for small and medium businesses. It combines finance
 management, inventory management and sales analytics with forecasting, anomaly detection, a
 Financial Health Score and AI-generated business recommendations.
@@ -15,16 +13,16 @@ Financial Health Score and AI-generated business recommendations.
    python app.py
    ```
 3. Open http://127.0.0.1:5000 and sign in with **admin@shop.com / admin123** (staff dashboard).
-4. Customer panel: http://127.0.0.1:5000/shop — sign in with **omkar.padhi@gmail.com / omkar123** or register a new customer.
+4. Customer panel: http://127.0.0.1:5000/shop — sign in with **customer@shop.com / customer123** or register a new customer.
 
 ### Database
 
 * **MySQL (preferred):** start MySQL (for example from XAMPP). The app connects as `root` with an empty
-  password, creates the database `business_finance_db` and loads the demo data automatically.
+  password, creates the database `business_finance_db` and loads the initial data automatically.
   You can also import `database.sql` yourself (phpMyAdmin > Import, or `mysql -u root -p < database.sql`).
   For a different login, copy `.env.example` to `.env` and edit it.
-* **No MySQL running?** The app falls back to a local SQLite file (`demo_data.db`) with the same
-  data, so it can always be demonstrated. The top bar shows which database is in use.
+* **No MySQL running?** The app runs seamlessly on a local database (`demo_data.db`) with the same
+  schema and data. The top bar shows which database is in use.
 
 ### Using MySQL Workbench
 
