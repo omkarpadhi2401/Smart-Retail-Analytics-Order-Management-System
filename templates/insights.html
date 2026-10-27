@@ -1,9 +1,100 @@
 {% extends "base.html" %}
 {% from "_macros.html" import kpi, status_badge %}
-{% block title %}AI Business Recommendations{% endblock %}
-{% block subtitle %}Actions generated from the current sales, expense, cash-flow and inventory data{% endblock %}
+{% block title %}AI Business Recommendations &amp; Assistant{% endblock %}
+{% block subtitle %}Interactive AI insights and rule-based operational guidance grounded in your business data{% endblock %}
 {% block content %}
-<div class="grid g4">
+
+<!-- AI Assistant Card -->
+{% if not ai_status.configured %}
+<div class="ai-alert-banner">
+  <div class="ai-alert-icon">
+    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+  </div>
+  <div class="ai-alert-text">
+    <strong>AI Setup Required:</strong>
+    {% if not ai_status.sdk_installed %}
+      The Groq SDK is not installed. Run <code>pip install -r requirements.txt</code> in your terminal.
+    {% else %}
+      Add your <code>GROQ_API_KEY</code> to the <code>.env</code> file in the project folder and restart the app. Get a free API key at <a href="https://console.groq.com/keys" target="_blank" rel="noopener">console.groq.com/keys</a>.
+    {% endif %}
+  </div>
+</div>
+{% endif %}
+
+<div class="card ai-assistant-card">
+  <div class="card-h ai-assistant-header">
+    <div>
+      <div class="ai-title-row">
+        <span class="ai-icon-badge">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3l1.8 4.7L18.5 9.5l-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8z"/><path d="M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8z"/></svg>
+        </span>
+        <h3>Business AI Assistant</h3>
+        <span class="badge b-info">Model: {{ ai_status.model }}</span>
+      </div>
+      <p>Ask questions about your business data and get actionable insights.</p>
+    </div>
+    <div class="ai-header-actions right">
+      <button type="button" class="btn sm" id="btn-gen-summary">Generate AI summary</button>
+      <button type="button" class="btn sm ghost" id="btn-gen-recs">AI recommendations</button>
+      <button type="button" class="btn ghost sm" id="ai-clear-btn" title="Clear conversation history">Clear Chat</button>
+    </div>
+  </div>
+
+  <div class="card-b">
+    <!-- One-click summary / recommendations panel -->
+    <div id="ai-quick-panel" class="ai-quick-panel" style="display:none;"></div>
+
+    <!-- Suggestion Chips -->
+    <div class="ai-chips-wrap">
+      <span class="ai-chips-label">Suggested:</span>
+      <div class="ai-chips">
+        <button type="button" class="ai-chip" data-q="Summary of business performance">Summary of business performance</button>
+        <button type="button" class="ai-chip" data-q="Products at risk of running out">Products at risk of running out</button>
+        <button type="button" class="ai-chip" data-q="Why expenses increased">Why expenses increased</button>
+        <button type="button" class="ai-chip" data-q="Products generating most revenue">Products generating most revenue</button>
+        <button type="button" class="ai-chip" data-q="Actions to improve profitability">Actions to improve profitability</button>
+        <button type="button" class="ai-chip" data-q="Explain financial health score">Explain financial health score</button>
+        <button type="button" class="ai-chip" data-q="What the sales trend suggests">What the sales trend suggests</button>
+        <button type="button" class="ai-chip" data-q="Unusual expenses to investigate">Unusual expenses to investigate</button>
+      </div>
+    </div>
+
+    <!-- Chat Messages Box -->
+    <div id="ai-chat-box" class="ai-chat-box">
+      <!-- Populated dynamically via JavaScript -->
+    </div>
+
+    <!-- Typing Indicator -->
+    <div id="ai-typing" class="ai-msg ai" style="display:none;">
+      <div class="ai-bubble ai ai-typing-bubble">
+        <span class="dot-flashing"></span>
+        <span>Analyzing data...</span>
+      </div>
+    </div>
+
+    <!-- Error Banner inside chat if needed -->
+    <div id="ai-chat-error" class="ai-msg error" style="display:none;">
+      <div class="ai-bubble error" id="ai-chat-error-text"></div>
+    </div>
+
+    <!-- Input Form -->
+    <form id="ai-chat-form" class="ai-input-form" onsubmit="return false;">
+      <div class="ai-input-container">
+        <textarea id="ai-question" rows="2" maxlength="1000" placeholder="Ask anything about sales, expenses, cash flow, stock or forecasts... (Enter to send, Shift+Enter for new line)"></textarea>
+        <div class="ai-input-footer">
+          <small class="muted" id="ai-char-count">0 / 1000</small>
+          <button type="submit" id="ai-send-btn" class="btn">
+            Send
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg>
+          </button>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Rule-Based Overview Section -->
+<div class="grid g4 mt">
   {{ kpi('High Priority', counts.High, 'act this week') }}
   {{ kpi('Medium Priority', counts.Medium, 'plan this month') }}
   {{ kpi('Low Priority', counts.Low, 'monitor') }}
@@ -29,4 +120,188 @@
 <div class="note mt"><b>How recommendations are generated.</b> A rule engine reads the analytics on every page load: demand forecasts and stock levels (stock-out and overstock risk),
   3-month product demand changes, category expense spikes and anomalies, operating-cost growth versus revenue growth, monthly cash flow and margin movement.
   Each card quotes the figures that triggered it — add an expense or receive stock and the list updates.</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function() {
+  const STORAGE_KEY = 'bfi_ai_chat_history';
+  const chatBox = document.getElementById('ai-chat-box');
+  const questionInput = document.getElementById('ai-question');
+  const sendBtn = document.getElementById('ai-send-btn');
+  const typingIndicator = document.getElementById('ai-typing');
+  const charCounter = document.getElementById('ai-char-count');
+  const clearBtn = document.getElementById('ai-clear-btn');
+  const errorBox = document.getElementById('ai-chat-error');
+  const errorText = document.getElementById('ai-chat-error-text');
+  const quickPanel = document.getElementById('ai-quick-panel');
+
+  let history = [];
+
+  function loadHistory() {
+    try {
+      const saved = sessionStorage.getItem(STORAGE_KEY);
+      if (saved) {
+        history = JSON.parse(saved);
+        if (!Array.isArray(history)) history = [];
+      }
+    } catch (e) {
+      history = [];
+    }
+  }
+
+  function saveHistory() {
+    try {
+      sessionStorage.setItem(STORAGE_KEY, JSON.stringify(history));
+    } catch (e) {}
+  }
+
+  function renderMessages() {
+    chatBox.innerHTML = '';
+    if (history.length === 0) {
+      chatBox.innerHTML = `
+        <div class="ai-empty-chat">
+          <div class="ai-empty-icon">
+            <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3l1.8 4.7L18.5 9.5l-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8z"/><path d="M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8z"/></svg>
+          </div>
+          <div class="ai-empty-title">How can I assist your business today?</div>
+          <p class="muted">Ask any question or click a suggestion chip above to query live financials, demand forecasts, stock levels, or anomalies.</p>
+        </div>
+      `;
+      return;
+    }
+
+    history.forEach(msg => {
+      appendBubble(msg.role, msg.content, false);
+    });
+    chatBox.scrollTop = chatBox.scrollHeight;
+  }
+
+  function appendBubble(role, content, scroll = true) {
+    // If empty-state is currently shown, remove it
+    const empty = chatBox.querySelector('.ai-empty-chat');
+    if (empty) empty.remove();
+
+    const wrap = document.createElement('div');
+    wrap.className = `ai-msg ${role}`;
+    
+    const bubble = document.createElement('div');
+    bubble.className = `ai-bubble ${role}`;
+
+    if (role === 'assistant') {
+      bubble.innerHTML = window.AI.renderMarkdown(content);
+    } else {
+      bubble.textContent = content; // Safely sets plain text for user messages
+    }
+
+    wrap.appendChild(bubble);
+    chatBox.appendChild(wrap);
+
+    if (scroll) {
+      chatBox.scrollTop = chatBox.scrollHeight;
+    }
+  }
+
+  function showError(msg) {
+    if (!msg) {
+      errorBox.style.display = 'none';
+      return;
+    }
+    errorText.textContent = msg;
+    errorBox.style.display = 'flex';
+    chatBox.scrollTop = chatBox.scrollHeight;
+  }
+
+  async function sendMessage(text) {
+    const q = (text || questionInput.value || '').trim();
+    if (!q) return;
+
+    showError('');
+    questionInput.value = '';
+    updateCharCount();
+
+    // Append to UI & history
+    appendBubble('user', q);
+    history.push({ role: 'user', content: q });
+    saveHistory();
+
+    // Disable inputs & show typing
+    sendBtn.disabled = true;
+    questionInput.disabled = true;
+    typingIndicator.style.display = 'flex';
+    chatBox.scrollTop = chatBox.scrollHeight;
+
+    // Send the last 8 messages
+    const recentHistory = history.slice(-8);
+
+    try {
+      const res = await window.AI.postJson('/ai/chat', {
+        question: q,
+        history: recentHistory
+      });
+
+      appendBubble('assistant', res.answer);
+      history.push({ role: 'assistant', content: res.answer });
+      saveHistory();
+    } catch (err) {
+      showError(err.message || 'Error communicating with AI assistant.');
+    } finally {
+      typingIndicator.style.display = 'none';
+      sendBtn.disabled = false;
+      questionInput.disabled = false;
+      questionInput.focus();
+    }
+  }
+
+  function updateCharCount() {
+    const len = questionInput.value.length;
+    charCounter.textContent = `${len} / 1000`;
+  }
+
+  // Event Listeners
+  questionInput.addEventListener('input', updateCharCount);
+
+  questionInput.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      sendMessage();
+    }
+  });
+
+  sendBtn.addEventListener('click', function() {
+    sendMessage();
+  });
+
+  clearBtn.addEventListener('click', function() {
+    if (confirm('Clear chat history?')) {
+      history = [];
+      saveHistory();
+      renderMessages();
+      showError('');
+    }
+  });
+
+  // Suggestion chips
+  document.querySelectorAll('.ai-chip').forEach(btn => {
+    btn.addEventListener('click', function() {
+      const q = this.getAttribute('data-q');
+      sendMessage(q);
+    });
+  });
+
+  // Quick Action Buttons
+  document.getElementById('btn-gen-summary').addEventListener('click', function() {
+    window.AI.getSummary(quickPanel);
+  });
+
+  document.getElementById('btn-gen-recs').addEventListener('click', function() {
+    window.AI.getRecommendations(quickPanel);
+  });
+
+  // Initialize
+  loadHistory();
+  renderMessages();
+  updateCharCount();
+})();
+</script>
 {% endblock %}

@@ -3,3 +3,4 @@ mysql-connector-python>=8.3
 numpy
 scikit-learn
 python-dotenv
+groq>=0.30

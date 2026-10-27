@@ -11,10 +11,17 @@ import os
 from datetime import date, datetime
 from functools import wraps
 
-from flask import (Flask, Response, flash, redirect, render_template, request,
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except Exception:
+    pass
+
+from flask import (Flask, Response, flash, jsonify, redirect, render_template, request,
                    session, url_for)
 from werkzeug.security import check_password_hash, generate_password_hash
 
+import ai_service
 import analytics
 import db
 import seed
@@ -290,7 +297,72 @@ def insights():
     areas = sorted({r["area"] for r in recs})
     counts = {p: sum(1 for r in recs if r["priority"] == p) for p in ("High", "Medium", "Low")}
     return render_template("insights.html", active="insights", areas=areas, area=area, counts=counts,
-                           recs=[r for r in recs if not area or r["area"] == area], h=d["health"])
+                           recs=[r for r in recs if not area or r["area"] == area], h=d["health"],
+                           ai_status=ai_service.status())
+
+
+# ── AI Assistant Routes ─────────────────────────────────────────────────────
+def _handle_ai(fn, *args, **kwargs):
+    try:
+        ai_service.check_rate(session["user_id"])
+        res = fn(*args, **kwargs)
+        return jsonify(res)
+    except ai_service.AIError as e:
+        return jsonify({"error": e.message, "code": e.code}), e.status
+    except Exception as ex:
+        app.logger.error("AI service error: %s", ai_service.mask(str(ex)))
+        return jsonify({"error": "An unexpected error occurred. Please try again.", "code": "internal_error"}), 500
+
+
+@app.route("/ai/chat", methods=["POST"])
+@login_required
+def ai_chat():
+    data = request.get_json(silent=True) or request.form or {}
+    question = data.get("question", "")
+    history = data.get("history", [])
+    return _handle_ai(ai_service.chat, question, history)
+
+
+@app.route("/ai/summary", methods=["POST"])
+@login_required
+def ai_summary():
+    return _handle_ai(ai_service.summary)
+
+
+@app.route("/ai/recommendations", methods=["POST"])
+@login_required
+def ai_recommendations():
+    return _handle_ai(ai_service.recommendations)
+
+
+@app.route("/ai/explain/anomaly/<int:expense_id>", methods=["POST"])
+@login_required
+def ai_explain_anomaly(expense_id):
+    return _handle_ai(ai_service.explain_anomaly, expense_id)
+
+
+@app.route("/ai/explain/forecast/<int:product_id>", methods=["POST"])
+@login_required
+def ai_explain_forecast(product_id):
+    return _handle_ai(ai_service.explain_forecast, product_id)
+
+
+@app.route("/ai/explain/health", methods=["POST"])
+@login_required
+def ai_explain_health():
+    return _handle_ai(ai_service.explain_health)
+
+
+@app.route("/ai/status", methods=["GET"])
+@login_required
+def ai_status_route():
+    try:
+        return jsonify(ai_service.status())
+    except ai_service.AIError as e:
+        return jsonify({"error": e.message, "code": e.code}), e.status
+    except Exception as ex:
+        app.logger.error("AI status error: %s", ai_service.mask(str(ex)))
+        return jsonify({"error": "An unexpected error occurred. Please try again.", "code": "internal_error"}), 500
 
 
 @app.route("/staff")

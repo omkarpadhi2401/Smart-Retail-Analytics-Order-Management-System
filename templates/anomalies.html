@@ -13,13 +13,19 @@
 <div class="card mt">
   <div class="card-h"><div><h3>Flagged Expenses</h3><p>Sorted by how far each one is from normal</p></div></div>
   <div class="card-b" style="padding:16px 0 0"><div class="table-wrap"><table>
-    <thead><tr><th>Date</th><th>Expense</th><th>Category</th><th class="r">Amount</th><th class="r">Typical</th><th class="r">Times normal</th><th>Why it is unusual</th><th>Severity</th></tr></thead>
+    <thead><tr><th>Date</th><th>Expense</th><th>Category</th><th class="r">Amount</th><th class="r">Typical</th><th class="r">Times normal</th><th>Why it is unusual</th><th>Severity</th><th class="r">AI Explain</th></tr></thead>
     <tbody>{% for a in an['items'] %}<tr>
       <td class="num">{{ a.expense_date }}</td><td><b>{{ a.description }}</b><div class="muted">{{ a.vendor }}</div></td>
       <td><span class="badge b-mute">{{ a.category }}</span></td><td class="r"><b>₹{{ a.amount|inr }}</b></td>
       <td class="r">₹{{ a.typical|inr }}</td><td class="r">{{ '%.1f'|format(a.ratio) }}×</td>
-      <td>{{ a.reason|replace('Rs ', '₹') }}</td><td>{{ status_badge(a.severity) }}</td></tr>
-    {% else %}<tr><td colspan="8" class="muted" style="text-align:center;padding:30px">No unusual expenses found.</td></tr>{% endfor %}</tbody>
+      <td>{{ a.reason|replace('Rs ', '₹') }}</td><td>{{ status_badge(a.severity) }}</td>
+      <td class="r">
+        <button type="button" class="btn ghost sm ai-explain-btn" onclick="window.AI.explainAnomaly({{ a.expense_id }}, this)">
+          <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3l1.8 4.7L18.5 9.5l-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8z"/></svg>
+          Explain
+        </button>
+      </td></tr>
+    {% else %}<tr><td colspan="9" class="muted" style="text-align:center;padding:30px">No unusual expenses found.</td></tr>{% endfor %}</tbody>
   </table></div></div>
 </div>
 

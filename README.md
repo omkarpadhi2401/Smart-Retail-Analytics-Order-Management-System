@@ -76,15 +76,45 @@ lines) and 253 expenses in 8 categories. It includes festive seasonality, growin
 low-stock / out-of-stock / overstocked items and four planted unusual expenses.
 `python seed.py` regenerates `database.sql`.
 
+## Groq AI Assistant Setup
+
+The system includes an interactive **Business AI Assistant** powered by Groq (`ai_service.py`), grounded in your actual business figures:
+
+1. Get a free API key at [console.groq.com/keys](https://console.groq.com/keys).
+2. Create or edit `.env` in the project root:
+   ```env
+   GROQ_API_KEY=your_groq_api_key_here
+   GROQ_MODEL=openai/gpt-oss-20b
+   ```
+   *(Never commit `.env` to version control; it is listed in `.gitignore`)*
+3. Install dependencies:
+   ```bash
+   pip install -r requirements.txt
+   ```
+4. Run the app:
+   ```bash
+   python app.py
+   ```
+5. Visit the **AI Recommendations & Assistant** page (`/insights`) to chat with the assistant or use the **Explain with AI** buttons on the Anomalies, Demand Forecast, and Financial Health pages.
+
+> **Data Privacy & AI Safety:**
+> - The model does **NOT** write or execute SQL.
+> - Customer personal details (names, emails, phone numbers, addresses, passwords) are **never** shared with the model.
+> - All calculations in `analytics.py` (Linear Regression demand forecasting, Robust Z-scores, and the 5-factor Financial Health Score) remain fully deterministic; the AI explains, summarizes, and contextualizes them.
+
 ## Files
 
 ```
-app.py          Flask routes and pages
-analytics.py    Analytics and AI engine
+app.py          Flask routes, page handlers, and AI API endpoints
+ai_service.py   Groq AI client, topic detection, context builder, and assistant
+analytics.py    Financial calculations, Linear Regression forecast, Z-score anomalies
 db.py           MySQL connection with SQLite fallback, auto-seeding
 seed.py         Demo-data generator + schema
-database.sql    MySQL schema and data
-templates/      Pages (Jinja2)        static/   CSS, chart helpers, Chart.js (bundled, works offline)
+database.sql    MySQL schema and demo dataset
+templates/      HTML templates with responsive design and AI assistant components
+static/         CSS theme (style.css), Chart.js, app.js, and shared AI logic (ai.js)
+tests/          Pytest test suite (test_ai.py)
 ```
 
-Tech stack: Python, Flask, MySQL, scikit-learn, NumPy, Chart.js.
+Tech stack: Python, Flask, Groq API, scikit-learn, NumPy, MySQL, SQLite, Chart.js.
+

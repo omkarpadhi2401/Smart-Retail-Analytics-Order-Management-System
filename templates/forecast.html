@@ -30,7 +30,15 @@
       <tr><td>Stock lasts</td><td class="r">{% if cur.days_left is none %}–{% else %}about {{ cur.days_left|round|int }} days{% endif %}</td></tr>
       <tr><td>Demand trend</td><td class="r">{{ '%+.1f'|format(cur.trend) }}% / month</td></tr>
       <tr><td>Back-test accuracy</td><td class="r">{% if cur.accuracy is none %}–{% else %}{{ '%.0f'|format(cur.accuracy) }}%{% endif %}</td></tr>
-    </table></div>
+    </table>
+    <div style="margin-top:14px">
+      <button type="button" class="btn sm ghost" style="width:100%;justify-content:center" onclick="window.AI.explainForecast({{ cur.product_id }}, 'forecast-ai-panel')">
+        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3l1.8 4.7L18.5 9.5l-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8z"/></svg>
+        Explain Forecast with AI
+      </button>
+      <div id="forecast-ai-panel" style="display:none;margin-top:12px"></div>
+    </div>
+    </div>
   </div>
 </div>
 {% endif %}
